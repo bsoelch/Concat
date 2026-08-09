@@ -433,10 +433,53 @@ namespace: interpreter
   end
   proc(
     Type : srcType
+    ConstValue : oldValue
+    Type : targetType
+    TypeContext ptr.mut : typeContext
+  -> bool ) =>: export: needCastConstant
+    ## float -> int
+    oldValue .Float ? and targetType typeContext types.isInt if
+      true return
+    end
+    ## extend int
+    oldValue .Int ? and targetType typeContext types.isFloat or
+        targetType typeContext types.isInt and
+        srcType typeContext types.isInt and
+        targetType typeContext types.sizeOf .Fixed <unwrap>
+          srcType typeContext types.sizeOf .Fixed <unwrap> > if
+      true return
+    end
+    ## TODO: initializer to array
+    ##  * conversions to primitive array
+    ##  * conversions of elements
+    srcType .Initializer ? and targetType typeContext types.isTuple if
+      srcType typeContext types.compositeElts =:: srcElts
+      targetType typeContext types.compositeElts =:: targetElts
+      oldValue .Array .else
+        "expected initializer to have array value" ..panic
+      end =:: valElts
+      ## TODO? detect name reorder
+      srcElts .length for =:: i
+        srcElts i []
+          valElts i []
+          targetElts i []
+          typeContext
+        needCastConstant if true return end
+      end
+      false return
+    end
+    srcType .Initializer ? and targetType typeContext types.isUnion if
+      true return
+    end
+    false return
+  end
+  proc(
+    Type : srcType
     SignType : signType
     ConstValue : oldValue
     Type : targetType
-    TypeContext ptr : typeContext
+    ConstantContext ptr.mut : constContext
+    TypeContext ptr.mut : typeContext
   -> ConstValue ) =>: export: castConstant
     signType .UNSIGNED or signType .NONE and
       srcType typeContext types.isUnsignedInt or srcType typeContext types.isChar or
@@ -491,9 +534,26 @@ namespace: interpreter
     else ..drop end
     ## TODO? special handling for int <-> pointer
     ## TODO? convert primitive arrays to correct array type?
+    srcType oldValue targetType typeContext needCastConstant ! if
+      oldValue return
+    end
     srcType .Initializer ? and targetType typeContext types.isTuple if
-      ## TODO: correctly convert individual element values
-      ## reorder elements if neccessary
+      srcType typeContext types.compositeElts =:: srcElts
+      targetType typeContext types.compositeElts =:: targetElts
+      oldValue .Array .else
+        "expected initializer to have array value" ..panic
+      end =:: valElts
+      valElts .length i32 cast.u constContext prepareConstArray =:: newVals
+      srcElts .length for =:: i
+        srcElts i []
+          signType
+          valElts i []
+          targetElts i []
+          constContext
+          typeContext
+        castConstant newVals i =[]
+      end
+      newVals slice.freeze ConstValue .Array return
     else srcType .Initializer ? and targetType typeContext types.isUnion _if
       "unimplemented: initializer to union" ..panic
     end
@@ -1423,6 +1483,7 @@ proc(
         signType
         oldValue
         targetType
+        constContext
         typeContext
       castConstant =:: newValue
       ## pushValue
@@ -1444,7 +1505,7 @@ proc(
         SignType .NONE
         value
         op [] .dataType
-      typeContext castConstant =:: newValue
+      constContext typeContext castConstant =:: newValue
       value context [] .stack $ .length offset - list.set
       ## ValueInfo
         op [] .dataType
@@ -2093,6 +2154,7 @@ namespace: interpreter
             SignType .NONE
             oldValue
             valType
+            constContext
             typeContext
           castConstant
           valType outValInfo .valueType=

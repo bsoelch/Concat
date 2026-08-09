@@ -80,6 +80,14 @@ proc(
   context .arrayValues=
   result return
 end
+proc(
+  i32 : size
+  ConstantContext ptr.mut : context
+-> ConstValue slice.mut ) =>: export: prepareConstArray
+  context [] .arrayValues
+    size ConstValue mixedArena.allocSlice <$
+  context .arrayValues=
+end
 
 proc( i8 slice : elts ConstantContext ptr.mut : context -> ConstValue ) =>: export: newArray8Const
   elts context constPrimitiveArray ConstValue .Array8 return

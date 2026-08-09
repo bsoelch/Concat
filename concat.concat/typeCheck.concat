@@ -435,7 +435,9 @@ proc(
   TypeCheckState ptr.mut : state
 -> bool ) =>: tryCastConstant
   state [] .program .errors =:: errors
-  state [] .program .idContext .typeContext =:: typeContext
+  state [] .program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
   src .value .None ? if
     true return
   end
@@ -448,7 +450,7 @@ proc(
   state [] .compiledOps src .opIndex @[] =:: srcOp
   target typeContext types.unwrapRefinement =:: targetBase
   ## TODO! check refinement-types
-  src .valueType signType src .value targetBase typeContext interpreter.castConstant srcOp .val .Constant=
+  src .valueType signType src .value targetBase constContext typeContext interpreter.castConstant srcOp .val .Constant=
   target srcOp .dataType=
   false return
 end
@@ -1495,7 +1497,7 @@ proc(
       SignType .NONE
       arg [] .value
       argType
-      typeContext interpreter.castConstant
+      constContext typeContext interpreter.castConstant
     arg .value=
   finally
     procArgIndex 1 + procArgIndex=
