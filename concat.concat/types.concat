@@ -409,11 +409,11 @@ namespace: types
        Empty Align case true return
        ArrayType .case ## arrays of empty values are empty
          arrayTypeBase context isEmpty return
-       Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer
+       Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer Initializer
          NamedType GenericType IntLiteral UnionElement Quotation
          GeneratedType Enum RefinementType TaggedUnion case false return
        SetType .case .elements [] .length 0 == return
-       Struct Initializer RawUnion case
+       Struct RawUnion case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
     end
   end
