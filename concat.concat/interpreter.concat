@@ -555,7 +555,30 @@ namespace: interpreter
       end
       newVals slice.freeze ConstValue .Array return
     else srcType .Initializer ? and targetType typeContext types.isUnion _if
-      "unimplemented: initializer to union" ..panic
+      srcType targetType typeContext types.canCastUnionInitializer .else
+        "cannot cast union type" ..panic
+      end i32 cast.u =:: elementIndex
+      oldValue .Array .else
+        "expected initializer to have array value" ..panic
+      end 0 slice.get .else ConstValue .None end
+      ## convert element consant to target-elt type
+        srcType 0 typeContext types.compositeGetElement .else
+          Type .Empty
+        end
+          signType
+          >>$
+          targetType
+            typeContext types.asRawUnion <unwrap>
+          elementIndex typeContext types.compositeGetElement <unwrap>
+        constContext typeContext castConstant
+      elementIndex constContext newUnionConst
+        targetType typeContext types.isTaggedUnion if
+          ConstValue 2 array : mut: unionData
+          unionData@ 0 =[]
+          elementIndex i64 cast.u ConstValue .Int unionData@ 1 =[]
+          unionData@ slice.wrap constContext newArrayConst
+        end
+      return
     end
     oldValue return
   end

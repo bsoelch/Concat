@@ -2435,7 +2435,7 @@ namespace: types
     end
     true return
   end
-  proc( Type : src Type : target TypeContext ptr.mut : context -> iSize optional ) =>: canCastUnionInitializer
+  proc( Type : src Type : target TypeContext ptr.mut : context -> iSize optional ) =>: export: canCastUnionInitializer
     context .nameContext =:: nameContext
     src context unwrapNamed =:: srcBase
     target context unwrapNamed =:: targetBase

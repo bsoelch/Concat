@@ -3395,34 +3395,43 @@ proc(
         idInfo .idType switch
           GLOBAL_VAR LOCAL_VAR PROCEDURE TYPE case
             state .stack branchTree.peek .if
-              [] .value
+              $ [] .valueType
+              >$ [] .value
               idInfo .idType .TYPE if
                 .TypeId .else
                   "unexpected constant for type declaration" sb.copyPtr
                     >$ typeContext sb.appendConstant
                   op .pos errors appendError
-                  continue.opLoop
+                  ..drop continue.opLoop
                 end idInfo .nameId typeContext types.initializeNamedType .else
                   "re-initialization of named type: " sb.copyPtr
                     idInfo .nameId nameContext sb.appendIdentifierPath
                   op .pos errors appendError
-                  continue.opLoop
+                  ..drop continue.opLoop
                 end ConstValue .TypeId
               end
-            else ConstValue .None end =:: constVal
+            else Type .Empty ConstValue .None end =:: constVal =:: srcType
             constVal .TypeId ? or state isGlobal and constVal .None ? ! if
               ## remove type-constant from code
               1 op .pos state discardValues
+              constVal
             else
               ## requireTypes
                 opType@ slice.wrap
                 "initialization":s
                 0 false
                 op .pos
-              state requireTypes .Err ? if ## TODO? can requireTypes change constVal
+              state requireTypes .Err ? if
                 continue.opLoop
               end
-            end
+              ## apply correct cast to const-value
+              ## TODO: avoid duplicate cast (once for source constant once for const-value)
+              srcType
+                SignType .NONE
+                constVal
+                opType
+              constContext typeContext interpreter.castConstant
+            end =:: shadow: constVal
             ## update constant value in identifier if stack-value is constant
             ##   don't update mutable local variables
             constVal .TypeId ? or constVal .None ? ! and
