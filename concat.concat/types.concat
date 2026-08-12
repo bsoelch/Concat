@@ -73,6 +73,7 @@ union(
           types.ArrayId : ArrayType
           types.TupleId : Struct
           types.TupleId : TaggedUnion
+          types.UnionId : ComputedUnion
           types.UnionId : RawUnion
    types.UnionElementId : UnionElement
            types.EnumId : Enum
@@ -287,6 +288,8 @@ namespace: types
         b .Enum unionElement.unwrap enumTypeCmp return
       TaggedUnion .case
         b .TaggedUnion unionElement.unwrap tupleTypeCmp return
+      ComputedUnion .case
+        b .ComputedUnion unionElement.unwrap unionTypeCmp return
       RawUnion .case
         b .RawUnion unionElement.unwrap unionTypeCmp return
       UnionElement .case
@@ -369,6 +372,7 @@ namespace: types
       SetType .case setTypeHash 71 * return
       RefinementType .case refinementTypeHash 73 * return
       Quotation .case ProcId.hash 79 * return
+      ComputedUnion .case unionTypeHash 83 * return
     end
   end
 end
@@ -409,9 +413,12 @@ namespace: types
        Empty Align case true return
        ArrayType .case ## arrays of empty values are empty
          arrayTypeBase context isEmpty return
-       Undefined PrimitiveType Procedure  CType Pointer MutablePointer MutableRawPointer RawPointer Initializer
-         NamedType GenericType IntLiteral UnionElement Quotation
-         GeneratedType Enum RefinementType TaggedUnion case false return
+       Undefined PrimitiveType Procedure  CType Pointer
+           MutablePointer MutableRawPointer RawPointer Initializer
+           NamedType GenericType IntLiteral UnionElement Quotation
+           GeneratedType Enum RefinementType TaggedUnion ComputedUnion case
+         false
+       return
        SetType .case .elements [] .length 0 == return
        Struct RawUnion case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
@@ -535,7 +542,7 @@ namespace: types
            Undefined PrimitiveType Procedure CType Pointer
            NamedType GenericType RawPointer Quotation
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct TaggedUnion SetType RefinementType case
+           Struct TaggedUnion ComputedUnion SetType RefinementType case
          false return
     end
   end
@@ -573,7 +580,7 @@ namespace: types
            Undefined  PrimitiveType Procedure CType Pointer
            NamedType GenericType RawPointer Quotation
            GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct TaggedUnion SetType RefinementType case
+           Struct TaggedUnion ComputedUnion SetType RefinementType case
          t return
     end
   end
@@ -627,7 +634,7 @@ namespace: types
         compositeInfo [] .elements .length 1 u> if SimpleTypeInfo.MANY return end
         compositeInfo [] .elements .length 0 == if SimpleTypeInfo.EMPTY return end
         compositeInfo [] .elements 0 [] context simpleType return
-      RawUnion .case .compositeInfo =:: compositeInfo
+      RawUnion ComputedUnion .case .compositeInfo =:: compositeInfo
         SimpleTypeInfo.EMPTY =:: mut: commonType
         compositeInfo [] .elements for
           context simpleType =:: eltType
@@ -665,7 +672,9 @@ namespace: types
             context simpleType SimpleTypeInfo.weight regCount + regCount=
           end
         regCount 3 u<= return
-      RawUnion .case Type .RawUnion context simpleType SimpleTypeInfo.MANY != return
+      RawUnion ComputedUnion .case
+        Type .RawUnion context simpleType SimpleTypeInfo.MANY !=
+      return
       Undefined GenericType case false return
       Initializer .case .asTuple TupleId cast Type .Struct context isValueType return
       UnionElement .case unionElementUnion context isValueType return
@@ -891,8 +900,12 @@ namespace: types
     TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeSize
     composite switch
-      Struct TaggedUnion .case composite >$ typeContext tryComputeTupleSize return
-      RawUnion .case composite >$ typeContext tryComputeUnionSize return
+      Struct TaggedUnion .case
+        composite >$ typeContext tryComputeTupleSize
+      return
+      RawUnion ComputedUnion .case
+        composite >$ typeContext tryComputeUnionSize
+      return
       Initializer .case
         ## tryComputeUnionSize
           composite
@@ -918,7 +931,7 @@ namespace: types
       Pointer MutablePointer RawPointer MutableRawPointer Procedure Quotation case
         PTR_SIZE TypeSize .Fixed return
       ArrayType .case arrayTypeBase context alignOf return
-      Struct TaggedUnion RawUnion Initializer case
+      Struct TaggedUnion RawUnion ComputedUnion Initializer case
         t context tryComputeSize if
           TypeSize .Unknown return
         end
@@ -975,7 +988,7 @@ namespace: types
           GenericArg case baseSizeVal TypeSize .DynamicArray return
         end
         break
-      Struct TaggedUnion RawUnion Initializer case
+      Struct TaggedUnion RawUnion ComputedUnion Initializer case
         t context tryComputeSize if
           TypeSize .Unknown return
         end
@@ -1310,7 +1323,7 @@ namespace: types
   proc( Type TypeContext ptr : context -> bool ) =>: export: isComposite
     context unwrapNamed
     switch
-      Enum Struct TaggedUnion RawUnion Initializer UnionElement case
+      Enum Struct TaggedUnion ComputedUnion RawUnion Initializer UnionElement case
         true return
       Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
         NamedType GenericType GeneratedType IntLiteral Align
@@ -1334,20 +1347,24 @@ namespace: types
     unwrapNamed isEnum0
   end
   proc( Type : t -> bool ) =>: export: isUnion0
-    t .TaggedUnion ? or t .RawUnion ? end return
+    t .TaggedUnion ? or t .RawUnion ? or t .ComputedUnion ? end
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
     unwrapNamed isUnion0
   end
+  ## TODO! go though all uses and determine if they should computed unions
   proc( Type -> bool ) =>: export: isTaggedUnion0
     .TaggedUnion ?
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
     unwrapNamed isTaggedUnion0
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isComputedUnion
+    unwrapNamed .ComputedUnion ?
+  end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isEnumOrTaggedUnion
     typeContext unwrapNamed switch
-      Enum TaggedUnion case true return
+      Enum TaggedUnion ComputedUnion case true return
       Struct Undefined Empty PrimitiveType Pointer ArrayType Procedure RawUnion
        NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
        CType Align MutablePointer MutableRawPointer UnionElement Quotation case
@@ -1374,7 +1391,7 @@ namespace: types
     composite context unwrapNamed
       switch
         Struct TaggedUnion .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
-        RawUnion .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
+        RawUnion ComputedUnion .case UnionInfo ptr cast .compositeInfo CompositeData .Composite return
         UnionElement .case UnionElementInfo ptr cast [] .base context compositeData return
         Initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
@@ -1443,7 +1460,7 @@ namespace: types
   -> i64 optional ) =>: export: tupleElementOffset
     tuple typeContext unwrapNamed switch
       Struct TaggedUnion .case break
-      Enum RawUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
+      Enum RawUnion ComputedUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
        NamedType GenericType GeneratedType IntLiteral Initializer Align Quotation
        CType RawPointer MutablePointer MutableRawPointer case
          i64 optional.empty return
@@ -1467,7 +1484,7 @@ namespace: types
       Enum .case EnumInfo ptr cast [] .tagType 0:i64  optional.wrap return
       TaggedUnion .case .compositeInfo [] .elements 1 []
         enum UNION_TAG_INDEX typeContext tupleElementOffset return
-      RawUnion case Type .Empty i64 optional.empty return
+      RawUnion ComputedUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumTagInfo return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure Quotation
        NamedType GenericType GeneratedType IntLiteral Initializer Align
@@ -1682,6 +1699,15 @@ namespace: types
     context .nameContext .allocator=
     enumId EnumId cast Type .Enum return
   end
+  proc( Type slice TypeContext ptr : context -> bool ) =>: canComputeUnionTag
+    ## TODO: support other cases for computed union:
+    ##  * (?) <ptr> , <empty> -> check for all-one pointer
+    ##  * disjoint type-sets/refinement-types
+    $ .length 2 == and
+      $ 0 [] context isEmpty and
+      $ 1 [] context isPointer end
+    >$ ..drop
+  end
   0 =:: export: UNION_VALUE_INDEX
   1 =:: export: UNION_TAG_INDEX
   proc(
@@ -1707,12 +1733,15 @@ namespace: types
         -1
       CompositeInfo new UnionInfo new mixedArena.copyValue =:: unionData
     context .nameContext .allocator=
-    unionData UnionId cast Type .RawUnion =:: rawValue
-    unionType .RAW if
-      rawValue return
-    end
-    Type 2 array : mut: elements
-    rawValue elements@ UNION_VALUE_INDEX =[]
+    unionData UnionId cast
+      unionType .RAW if
+        Type .RawUnion return
+      end
+      _EXPERIMENTAL_ and elts context canComputeUnionTag if
+        Type .ComputedUnion return
+      end
+      Type 2 array : mut: elements
+    Type .RawUnion elements@ UNION_VALUE_INDEX =[]
     eltNames .length unionType computeEnumTagType elements@ UNION_TAG_INDEX =[]
     ## newTuple
       elements@ slice.wrap
@@ -1727,6 +1756,8 @@ namespace: types
   -> Type optional ) =>: export: asRawUnion
     unionType context unwrapNamed .TaggedUnion .if
       .compositeInfo [] .elements 0 slice.get return
+    else $ .ComputedUnion ? _if ..drop
+      unionType optional.wrap return
     else .RawUnion ? _if
       unionType optional.wrap return
     end
@@ -2293,7 +2324,7 @@ namespace: types
           true return
         end
         false return
-      Struct Enum TaggedUnion RawUnion Initializer UnionElement case
+      Struct Enum TaggedUnion ComputedUnion RawUnion Initializer UnionElement case
         t context compositeFlags COMP_FLAG_STATIC_ARGS & ? return
       GeneratedType .case GeneratedTypeName ptr cast =:: genType
         ## a GeneratedType is generic if one of its arguments is generic
@@ -2959,11 +2990,11 @@ namespace: sb
             " ptr.raw.mut" appendS
           end
         return
-      Struct TaggedUnion RawUnion Initializer case
+      Struct TaggedUnion ComputedUnion RawUnion Initializer case
         sb
           t .Struct ? if
             "struct( " appendS
-          else t .TaggedUnion ? _if
+          else t .TaggedUnion ? or t .ComputedUnion ? _if
             "union( " appendS
           else t .RawUnion ? _if
             "union.raw( " appendS

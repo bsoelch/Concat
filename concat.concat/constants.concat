@@ -350,7 +350,7 @@ namespace: constant
         end
         elts slice.freeze ConstValue .Array return
       break
-      TaggedUnion RawUnion UnionElement Enum case
+      TaggedUnion RawUnion ComputedUnion UnionElement Enum case
         "unimplemented: union default values" ..panic
       CType NamedType case ..unreachable
       SetType case

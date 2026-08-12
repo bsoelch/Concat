@@ -195,11 +195,13 @@ proc(
           sizeOffset list.setLength
         idContext .arraySizeBuffer=
       return
-    Struct TaggedUnion RawUnion Enum Initializer case
+    Struct TaggedUnion ComputedUnion RawUnion Enum Initializer case
       typeBuffer [] .length =:: typeOffset
       nameBuffer [] .length =:: nameOffset
       src
-        $ .TaggedUnion ? $ =:: srcTagged if typeContext types.asRawUnion .else "union unwrap" ..panic end end
+        $ .TaggedUnion ?
+          $ or $1 .ComputedUnion ? end =:: srcTagged
+        if typeContext types.asRawUnion .else "union unwrap" ..panic end end
       =:: shadow: src
       src typeContext types.compositeEltCount =:: eltCount
       eltCount for =:: i
@@ -228,7 +230,7 @@ proc(
             nameBuffer [] list.asSlice nameOffset slice.tail optional.wrap
             typeContext
           types.newTuple break
-        RawUnion case
+        RawUnion TaggedUnion ComputedUnion case
           ## newTuple
             typeBuffer [] list.asSlice typeOffset slice.tail
             nameBuffer [] list.asSlice nameOffset slice.tail slice.unwrapAll .else
@@ -528,7 +530,7 @@ proc(
         genericValues
         progContext
       resolveGenerics return
-    Struct TaggedUnion RawUnion Enum Initializer case
+    Struct TaggedUnion ComputedUnion RawUnion Enum Initializer case
       src typeContext types.unwrapNamed =:: shadow: src
       src ..tag target ..tag != if
         true return ## src and target have to be same type of composite

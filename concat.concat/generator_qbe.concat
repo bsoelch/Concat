@@ -184,7 +184,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
     CType .case types.cTypeAsType context toValType return
     Pointer MutablePointer RawPointer MutableRawPointer case
       ValType .PTR return
-    Procedure Quotation ArrayType Struct TaggedUnion RawUnion UnionElement Initializer case
+    Procedure Quotation ArrayType Struct TaggedUnion ComputedUnion RawUnion UnionElement Initializer case
       ValType .REFERENCE return
     SetType RefinementType case
       t typeContext types.unwrapRefinement context toValType return
@@ -600,7 +600,7 @@ namespace: sb
       Struct TaggedUnion case
         sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
         break
-      RawUnion case
+      RawUnion ComputedUnion case
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
         break
       UnionElement case
