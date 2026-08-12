@@ -1352,12 +1352,20 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isUnion
     unwrapNamed isUnion0
   end
-  ## TODO! go though all uses and determine if they should computed unions
   proc( Type -> bool ) =>: export: isTaggedUnion0
     .TaggedUnion ?
   end
+  proc( Type -> bool ) =>: export: isTaggedOrComputedUnion0
+    switch
+      TaggedUnion ComputedUnion case true return
+      default false return
+    end
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
     unwrapNamed isTaggedUnion0
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isTaggedOrComputedUnion
+    unwrapNamed isTaggedOrComputedUnion0
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isComputedUnion
     unwrapNamed .ComputedUnion ?

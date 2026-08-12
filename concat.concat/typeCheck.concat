@@ -2106,11 +2106,11 @@ proc(
   idContext .typeContext =:: typeContext
   OP_UNLINKED =:: mut: onRead
   containerType typeContext types.getArrayBaseType .if ## already unwrapped
-  else accessType .UNION_GET and containerType typeContext types.isTaggedUnion _if
+  else accessType .UNION_GET and containerType typeContext types.isTaggedOrComputedUnion _if
     containerType elementIndex typeContext types.newUnionElement .else
       "cannot create union element":s pos ..line internalErrorNoOp ..unreachable
     end
-  else containerType typeContext types.isTaggedUnion _if
+  else containerType typeContext types.isTaggedOrComputedUnion _if
     containerType typeContext types.asRawUnion .else
       "cannot get raw union-data":s pos ..line internalErrorNoOp ..unreachable
     end elementIndex typeContext types.compositeGetElement .else
@@ -2339,7 +2339,7 @@ proc(
         switchType typeContext types.isEnumOrTaggedUnion if
           ## appendIdentifierName
             switchType
-              $ typeContext types.isTaggedUnion if
+              $ typeContext types.isTaggedOrComputedUnion if
                 typeContext types.asRawUnion optional.unwrap
               end
             label .Int .else
@@ -2490,12 +2490,12 @@ proc(
     true return
   end =:: name
   ## compositeFindName
-    switchType $ typeContext types.isTaggedUnion if
+    switchType $ typeContext types.isTaggedOrComputedUnion if
       typeContext types.asRawUnion optional.unwrap
     end
     name
   typeContext types.compositeFindName .else
-    "enum " sb.copyPtr
+    "enum/union " sb.copyPtr
       switchType typeContext sb.appendType
       " does not have a label " sb.appendS
       name sb.appendStr
@@ -3607,7 +3607,7 @@ proc(
           continue.opLoop
         end
         containerType
-          $ typeContext types.isTaggedUnion if
+          $ typeContext types.isTaggedOrComputedUnion if
             typeContext types.asRawUnion optional.unwrap
           end
         =:: innerContainerType
@@ -3660,12 +3660,12 @@ proc(
         isType ! and accessType .GET if
           containerType typeContext types.isEnum if
             ElementAccessType .CHECK_ENUM accessType=
-          else containerType typeContext types.isTaggedUnion _if
+          else containerType typeContext types.isTaggedOrComputedUnion _if
             ElementAccessType .UNION_GET accessType=
           end
         end
         accessType .SET_NESTED if
-          containerType typeContext types.isEnum or containerType typeContext types.isTaggedUnion if
+          containerType typeContext types.isEnum or containerType typeContext types.isTaggedOrComputedUnion if
             "cannot write to element of enum/union-element" sb.copyPtr
             op .pos errors appendError
           end
@@ -3842,6 +3842,16 @@ proc(
             op .pos
           state pushConstant
           continue.opLoop
+        else enumType typeContext types.isComputedUnion or
+            enumType typeContext types.getUnionElementUnion .and
+            typeContext types.isComputedUnion _if
+          ## TODO? merge with tag-computation at switch start
+          ## TODO: compute union tag
+          ## 1. check kind of union
+          ## elt-count = 1 -> tag=0
+          ## elt-count = 2, elt[0] = empty, elt[1] = ptr -> tag = int(elt[1]!=0)
+          ## 2. compute tag
+          "unimplemented: computed union":s op ..line state internalError
         else enumType typeContext types.isTaggedUnion ! and enumType types.isUnionElement ! _if
           "wrong argument type for GetUnionTag expected enum or tagged union got " sb.copyPtr
             enumType typeContext sb.appendType
@@ -4423,7 +4433,9 @@ proc(
               end
             $ =:: switchValueType
               $ typeContext types.isTaggedUnion =:: isTaggedUnion
-              $ typeContext types.isEnumOrTaggedUnion if
+              $ typeContext types.isComputedUnion if
+                "unimplemented: computed unions":s op ..line state internalError
+              else $ typeContext types.isEnumOrTaggedUnion _if
                 typeContext types.enumTagInfo ..drop
               end
             =:: labelType
@@ -5220,7 +5232,7 @@ proc(
               switchData [] .defaultLabel LocalLabelType .LABEL_END op .pos state localLabel
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
-                  $ typeContext types.isTaggedUnion if
+                  $ typeContext types.isTaggedOrComputedUnion if
                     typeContext types.asRawUnion optional.unwrap
                   end
                 =:: rawSwitchType

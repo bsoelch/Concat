@@ -579,7 +579,7 @@ namespace: interpreter
         k 1 == "correct number of arguments" assert
         args 0 [] .TypeId .else
           "argument is no type" ..panic
-        end types.isTaggedUnion0
+        end types.isTaggedOrComputedUnion0
           ConstValue .Bool
         OperatorResult .SUCCESS return
       TYPE_IS_UNION_ELEMENT case
