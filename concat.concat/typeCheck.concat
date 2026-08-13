@@ -69,7 +69,7 @@ struct(
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
   SwitchId : switchId
-  IdentifierInfo optional : srcVar
+  IdentifierInfo : srcVar
   bool : inLabel
   bool : allowBreak
   bool : hasDefault
@@ -125,7 +125,7 @@ proc(
   Type : switchType
   Type : switchBaseType
   branchTree.NodeId : branchRoot
-  IdentifierInfo optional : srcVar
+  IdentifierInfo : srcVar
   NameId optional : blockName
   SwitchId : switchId
   FilePosition ptr : pos
@@ -2763,6 +2763,80 @@ proc(
   state [] .constBuffer valOffset list.setLength state .constBuffer=
   state [] .typeBuffer typesOffset list.setLength state .typeBuffer=
 end
+proc( Type : unionType FilePosition ptr : pos TypeCheckState ptr.mut : state -> ) =>: computeUnionTag
+  state [] .program =:: program
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  unionType typeContext types.isComputedUnion ! if
+    "cannot compute tag of type " sb.copyPtr
+      unionType typeContext sb.appendType
+    pos errors appendError
+    return
+  end
+  unionType typeContext types.compositeElts =:: elts
+  elts .length 1 u<= if
+    1 pos state discardValues
+    0 ConstValue .Int types.primitive.I8 pos state pushConstant
+    return
+  else elts .length 2 == and elts 0 [] typeContext types.isEmpty and elts 1 [] typeContext types.isPointer _if
+    state .stack branchTree.pop ..drop
+    unionType 1 pos opGetElement state appendOp ..drop
+    elts 1 [] types.I_SIZE SignType .UNSIGNED pos opCast state appendOp ..drop
+    0 ConstValue .Int types.I_SIZE pos opConst state appendOp ..drop
+    types.primitive.I8
+      ConstValue .None
+      types.I_SIZE
+        types.primitive.I_SIZE types.primitive.I64 types.typeEquals if BuiltIn .NE_I64 else BuiltIn .NE_I32 end
+      pos opBuiltIn
+    state pushValue
+    ## TODO! use explicit bool to i8 conversion (on some targets bool might not align with 0-1-i8 values)
+    return
+  else
+    "cannot compute tag of union " sb.copyPtr
+      unionType typeContext sb.appendType
+    pos errors appendError
+  end
+end
+proc( Type : unionType FilePosition ptr : pos TypeCheckState ptr.mut : state -> ) =>: typeCheckGetUnionTag
+  state [] .program =:: program
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  unionType typeContext types.isEnum if
+    unionType typeContext types.enumTagInfo ..drop state .stack branchTree.peek .if .valueType= else ..drop end
+    return
+  else unionType typeContext types.isType and
+      state .stack branchTree.peek .and .value .TypeId .and [] =:: unionEltType
+      unionEltType types.isUnionElement _if
+    1 pos state discardValues ## remove type from stack
+    unionEltType typeContext types.getUnionElementIndex i64 cast.u ConstValue .Int
+      unionEltType typeContext types.enumTagInfo ..drop
+      pos
+    state pushConstant
+    return
+  else unionType typeContext types.isComputedUnion _if
+    unionType pos state computeUnionTag
+    return
+  else unionType typeContext types.getUnionElementUnion .and $ =:: baseUnion
+      typeContext types.isComputedUnion _if
+    baseUnion pos state computeUnionTag
+    return
+  else unionType typeContext types.isTaggedUnion ! and unionType types.isUnionElement ! _if
+    "wrong argument type for GetUnionTag expected enum or tagged union got " sb.copyPtr
+      unionType typeContext sb.appendType
+    pos errors appendError
+  end
+  ## TODO? compile-time evaluation
+  unionType@ slice.wrap "GetUnionTag":s 0 false pos state requireTypes .Err ? if
+    return
+  end
+  unionType typeContext types.enumTagInfo ..drop ConstValue .None
+    unionType
+      $ types.isUnionElement if
+        typeContext types.getUnionElementUnion optional.unwrap
+      end
+    types.UNION_TAG_INDEX pos opGetElement
+  state pushValue
+end
 
 proc(
   PreOperation slice : ops
@@ -3826,49 +3900,11 @@ proc(
         state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
             op program sb.appendPreOp
-            " expected enum" sb.appendS
+            " expected enum or union" sb.appendS
           op .pos errors appendError
           continue.opLoop
-        end =:: label
-        label [] .valueType =:: enumType
-        enumType typeContext types.isEnum if
-          enumType typeContext types.enumTagInfo ..drop label .valueType=
-          continue.opLoop
-        else enumType typeContext types.isType and label .value .TypeId .and [] =:: unionEltType
-            unionEltType types.isUnionElement _if
-          1 op .pos state discardValues ## remove type from stack
-          unionEltType typeContext types.getUnionElementIndex i64 cast.u ConstValue .Int
-            unionEltType typeContext types.enumTagInfo ..drop
-            op .pos
-          state pushConstant
-          continue.opLoop
-        else enumType typeContext types.isComputedUnion or
-            enumType typeContext types.getUnionElementUnion .and
-            typeContext types.isComputedUnion _if
-          ## TODO? merge with tag-computation at switch start
-          ## TODO: compute union tag
-          ## 1. check kind of union
-          ## elt-count = 1 -> tag=0
-          ## elt-count = 2, elt[0] = empty, elt[1] = ptr -> tag = int(elt[1]!=0)
-          ## 2. compute tag
-          "unimplemented: computed union":s op ..line state internalError
-        else enumType typeContext types.isTaggedUnion ! and enumType types.isUnionElement ! _if
-          "wrong argument type for GetUnionTag expected enum or tagged union got " sb.copyPtr
-            enumType typeContext sb.appendType
-          op .pos errors appendError
-        end
-        ## TODO? compile-time evaluation
-        enumType@ slice.wrap "GetUnionTag":s 0 false op .pos state requireTypes .Err ? if
-          continue.opLoop
-        end
-        enumType typeContext types.enumTagInfo ..drop ConstValue .None
-          enumType
-            $ types.isUnionElement if
-              typeContext types.getUnionElementUnion optional.unwrap
-            end
-          types.UNION_TAG_INDEX op .pos opGetElement
-        state pushValue
-        continue.opLoop
+        end [] .valueType op .pos state typeCheckGetUnionTag
+      continue.opLoop
       Cast Cast! BitCast case
         op .pos state popType =:: castTarget
         1 op .pos state checkStackSize if
@@ -4427,31 +4463,25 @@ proc(
             state requireTypes .Err ? if
               continue.opLoop
             end
+            ## TODO? only create tmp-var if switch uses `.case`
+            0 StackModType .COPY op .pos opStackMod state appendOp ..drop
+            switchType id.FLAG_NONE op .pos idContext id.newTmpVar =:: srcVar
+            switchType srcVar op .pos opDeclareId state appendOp ..drop
+            switchType srcVar op .pos opSetId state appendOp ..drop
             switchType
               $ typeContext types.getPointerBaseType .if
                 >$ ..drop
               end
             $ =:: switchValueType
-              $ typeContext types.isTaggedUnion =:: isTaggedUnion
-              $ typeContext types.isComputedUnion if
-                "unimplemented: computed unions":s op ..line state internalError
-              else $ typeContext types.isEnumOrTaggedUnion _if
+              $ typeContext types.isTaggedUnion if
+                switchType types.UNION_TAG_INDEX op .pos opGetElement state appendOp ..drop
+              else $ typeContext types.isComputedUnion _if
+                switchType op .pos state computeUnionTag
+              end
+              $ typeContext types.isEnumOrTaggedUnion if
                 typeContext types.enumTagInfo ..drop
               end
             =:: labelType
-            isTaggedUnion if
-              ## TODO? only create tmp-var if switch uses `.case`
-              0 StackModType .COPY op .pos opStackMod state appendOp ..drop
-              switchType id.FLAG_NONE op .pos idContext id.newTmpVar =:: tmpVar
-              switchType tmpVar op .pos opDeclareId state appendOp ..drop
-              switchType tmpVar op .pos opSetId state appendOp ..drop
-              tmpVar optional.wrap
-            else
-              IdentifierInfo optional.empty
-            end =:: srcVar
-            isTaggedUnion if
-              switchType types.UNION_TAG_INDEX op .pos opGetElement state appendOp ..drop
-            end
             ## TODO! some enum / tagged-union / enum-label macro-ops are not well-typed
             ##   should type-checker rely on compatible internal representation or should conversions be emmitted
             switchType typeContext types.isPointer if
@@ -4590,27 +4620,22 @@ proc(
                     appendError
                   end
                 end
-                switchBlock [] .srcVar .if =:: srcVar
-                  switchBaseType srcVar op .pos opGetId state appendOp ..drop
-                  switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
-                  ## pushValue
-                    labelType
-                      switchBaseType typeContext types.isPointer if
-                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
-                      end
-                    ConstValue .None
-                    rawSwitchType
-                      switchBaseType typeContext types.isPointer if
-                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
-                      end
-                      eltIndex
-                      op .pos
-                    opGetElement
-                  state pushValue
-                else
-                  labelType@ slice.wrap op .pos state pushTypes
-                  "cannot access elements of switched type" sb.copyPtr op .pos errors appendError
-                end
+                switchBaseType switchBlock [] .srcVar op .pos opGetId state appendOp ..drop
+                switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
+                ## pushValue
+                  labelType
+                    switchBaseType typeContext types.isPointer if
+                      switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                    end
+                  ConstValue .None
+                  rawSwitchType
+                    switchBaseType typeContext types.isPointer if
+                      switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                    end
+                    eltIndex
+                    op .pos
+                  opGetElement
+                state pushValue
               else
                 128 sb.create
                   blockType sb.appendBlockType
@@ -4619,15 +4644,11 @@ proc(
                 op .pos errors appendError
               end
             else blockType .DOT_DEFAULT _if
-              switchBlock [] .srcVar .if =:: srcVar
-                ## pushValue
-                  switchBaseType
-                  ConstValue .None
-                  switchBaseType srcVar op .pos opGetId
-                state pushValue
-              else
-                "cannot access switched type" sb.copyPtr op .pos errors appendError
-              end
+              ## pushValue
+                switchBaseType
+                ConstValue .None
+                switchBaseType switchBlock [] .srcVar op .pos opGetId
+              state pushValue
             end
             true switchBlock .allowBreak=
             continue.opLoop

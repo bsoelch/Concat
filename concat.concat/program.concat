@@ -1253,13 +1253,15 @@ namespace: sb
         constData [] .value typeContext sb.appendConstant
       break
       Switch .case =:: switchId
+        switchId SwitchId.getSwitchData =:: switchData
         "switch: ( ":s sb.appendStr
-          switchId SwitchId.getSwitchData =:: switchData
+          switchData [] .switchType typeContext sb.appendType
+        " ) [ ":s sb.appendStr
           switchData [] .branchLabels for
             i64 cast.u sb.appendI ' ' sb.appendC
           end
           switchData [] .defaultLabel i64 cast.u sb.appendI
-        " )":s sb.appendStr
+        " ]":s sb.appendStr
       break
       EndProc case
         "End Procedure":s sb.appendStr

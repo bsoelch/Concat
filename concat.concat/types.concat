@@ -1492,7 +1492,8 @@ namespace: types
       Enum .case EnumInfo ptr cast [] .tagType 0:i64  optional.wrap return
       TaggedUnion .case .compositeInfo [] .elements 1 []
         enum UNION_TAG_INDEX typeContext tupleElementOffset return
-      RawUnion ComputedUnion case Type .Empty i64 optional.empty return
+      ComputedUnion case primitive.I8 i64 optional.empty return
+      RawUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumTagInfo return
       Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure Quotation
        NamedType GenericType GeneratedType IntLiteral Initializer Align
@@ -1711,7 +1712,7 @@ namespace: types
     ## TODO: support other cases for computed union:
     ##  * (?) <ptr> , <empty> -> check for all-one pointer
     ##  * disjoint type-sets/refinement-types
-    $ .length 2 == and
+    $ .length 1 u<= or $ .length 2 == and
       $ 0 [] context isEmpty and
       $ 1 [] context isPointer end
     >$ ..drop

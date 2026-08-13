@@ -599,15 +599,16 @@ namespace: sb
         break
       Struct TaggedUnion case
         sb t "struct":s storeType .STACK ! context appendCompositeTypeQBE return
-        break
+      break
       RawUnion ComputedUnion case
         sb t "union":s storeType .STACK ! context appendCompositeTypeQBE return
-        break
+      break
       UnionElement case
         sb t typeContext types.getUnionElementUnion optional.unwrap
           typeContext types.unwrapNamed
-        "struct":s storeType .STACK ! context appendCompositeTypeQBE return
-        break
+          $ typeContext types.isComputedUnion if "union":s else "struct":s end
+        storeType .STACK ! context appendCompositeTypeQBE return
+      break
       Enum case
         sb
           t typeContext types.enumTagInfo ..drop
@@ -1211,7 +1212,7 @@ namespace: sb
         context sb.appendTypeNameQBE
       return
     end
-    t typeContext types.isRawUnion if
+    t typeContext types.isRawUnion or t typeContext types.isComputedUnion if
       t typeContext types.compositeElts =:: elts
       false =:: mut: hasElt
       0:i64 =:: mut: bodySize
