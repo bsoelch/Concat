@@ -1746,7 +1746,7 @@ namespace: types
       unionType .RAW if
         Type .RawUnion return
       end
-      _EXPERIMENTAL_ and elts context canComputeUnionTag if
+      elts context canComputeUnionTag if
         Type .ComputedUnion return
       end
       Type 2 array : mut: elements
@@ -1765,8 +1765,8 @@ namespace: types
   -> Type optional ) =>: export: asRawUnion
     unionType context unwrapNamed .TaggedUnion .if
       .compositeInfo [] .elements 0 slice.get return
-    else $ .ComputedUnion ? _if ..drop
-      unionType optional.wrap return
+    else .ComputedUnion ._if
+      Type .RawUnion optional.wrap return
     else .RawUnion ? _if
       unionType optional.wrap return
     end

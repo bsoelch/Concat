@@ -3867,7 +3867,11 @@ proc(
           end
           constValue .None ? if
             ## pushValue
-              innerContainerType
+              containerType typeContext types.isTaggedUnion if
+                innerContainerType
+              else
+                containerType
+              end
               constValue
               innerContainerType elementIndex op .pos opNewUnion
             state pushValue
@@ -5654,7 +5658,9 @@ proc(
             isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
           =:: unionType
           valType unionType SignType .UNSIGNED op .pos opCast state appendOp ..drop
-          unionType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
+          unionType typeContext types.isTaggedUnion if
+            unionType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
+          end
           baseType typeContext types.getUnionElementIndex =:: eltIndex
           baseUnionType eltIndex typeContext types.compositeGetElement optional.unwrap
             isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
@@ -5670,7 +5676,11 @@ proc(
           end
             isPointer if valType typeContext types.isMutable typeContext types.getAddressType end
             ConstValue .None
-            valType types.UNION_VALUE_INDEX op .pos opGetElement
+            baseType typeContext types.isTaggedUnion if
+              valType types.UNION_VALUE_INDEX op .pos opGetElement
+            else
+              valType $2 SignType .UNSIGNED op .pos opCast
+            end
           state pushValue
         else
           "unexpected argument for raw-value expected union got: " sb.copyPtr

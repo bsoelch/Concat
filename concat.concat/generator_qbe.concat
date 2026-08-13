@@ -2702,6 +2702,8 @@ proc(
   src typeContext types.isPointer and target typeContext types.isPointer end or
       src types.isUnionElement and target typeContext types.isUnion end or
       src typeContext types.isUnion and target types.isUnionElement end or
+      src typeContext types.isComputedUnion and target typeContext types.isRawUnion end or
+      src typeContext types.isRawUnion and target typeContext types.isComputedUnion end or
       src typeContext types.isCallable and target typeContext types.isCallable if
     srcVal .valType targetValType != if ## update val-type
       ## TODO? check if dereference is needed
