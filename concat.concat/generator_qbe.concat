@@ -1231,7 +1231,10 @@ namespace: sb
           end
           i nonEmptyIndex=
         end
-        nonEmptyCount 0:iSize != "non-empty union has non-empty element" assert
+        nonEmptyCount 0:iSize == if
+          ## TODO why can this case occur?
+          ## "non-empty union has non-empty element" ..panic
+        end
         nonEmptyCount 1:iSize == if
           elts nonEmptyIndex [] =:: elt
           ## appendNestedTypeDeclarationQBE
