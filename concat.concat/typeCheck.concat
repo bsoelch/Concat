@@ -3815,6 +3815,10 @@ proc(
           state pushValue
           continue.opLoop
         end
+        innerContainerType elementIndex typeContext types.compositeGetEltName .and
+            id.identifierFlags id.MASK_BIT_FIELD & id.BIT_FIELD_NONE != if
+          "unimplemented: bit-field access":s op ..line state internalError ..unreachable
+        end
         isType if
           1 op .pos state discardValues ## remove container
           containerType typeContext types.isEnum if
@@ -3899,7 +3903,7 @@ proc(
           continue.opLoop
         end
         srcType containerType elementIndex accessType isPtr mutable op .pos state typeCheckGetElement
-        continue.opLoop
+      continue.opLoop
       GetUnionTag case
         state .stack branchTree.peek .else
           "missing argument for operation " sb.copyPtr
