@@ -1,14 +1,16 @@
 "mutex" import
 namespace: thread
   type : export: ThreadId
-  proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
-    ( T -> ) ptr : f
+  type .with( ..types.size iSize ..types.size u<= ) =:: export: ThreadArgType
+  proc( ThreadArgType : auto: T
+    proc.c( T -> ) ptr : f
     T : arg
-  -> ThreadId optional ) : export: create
+  -> ThreadId optional ) =:: export: ThreadCreateType ## FIXME! temporary type declaration until equality for generic procs works as expected correctly
+  ThreadCreateType ..types.unwrapNamed : export: create
   proc( ThreadId -> bool ) : export: join
   proc( -> ) : export: exit  
 end
-..compiler.system.glibc if
+true or ..compiler.system.glibc if
   "pthreads" import
 else ..compiler.system.linux _if
   "lthreads" import

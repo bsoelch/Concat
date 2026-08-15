@@ -2,6 +2,8 @@
 "../../linux/syscalls" import
 
 ## thread implementation on top of linux syscalls
+## !!! currently broken do wo change in threading API !!! TODO adjust code to match new API
+## "threads" import
 namespace: sys
   proc.c( -> ( -> ) ptr ptr.raw ) : extern: getBasePointer
   proc.c( -> ) : extern: cctThreadInit

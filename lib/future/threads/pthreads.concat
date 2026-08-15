@@ -1,19 +1,23 @@
-"threads.c" ..include.c
+"threads" import
+"pthreads.c" ..include
 namespace: thread
   i64 =:: export: ThreadId
 end
 namespace: c
-  proc.c( thread.ThreadId ptr.mut ( iSize -> ) ptr iSize -> ..ctype.int ) : extern: cct_helper_createPThread
+  proc.c( iSize proc.c( iSize -> ) ptr thread.ThreadId ptr.mut -> ..ctype.int ) : extern: cct_helper_createPThread
   proc.c( thread.ThreadId -> ..ctype.int ) : extern: cct_helper_joinPThread
   proc.c( -> ) : extern: cct_helper_exitPThread
 end
 namespace: thread
-  proc( type .with( ..types.size iSize ..types.size u<= ) : auto: T
-    ( T -> ) ptr : f
+  #+proc( ThreadArgType : auto: T
+    proc.c( T -> ) ptr : f
     T : arg
-  -> ThreadId optional ) =>: export: create
+  -> ThreadId optional )+# ThreadCreateType ..types.unwrapNamed =>: export: create
     ThreadId : mut: res
-    res@ f ( iSize -> ) ptr cast! c.cct_helper_createPThread i32 cast 0 == if
+    arg union.raw( T : Val iSize : Data ) .Val .Data
+      f proc.c( iSize -> ) ptr cast!
+      res@
+    c.cct_helper_createPThread i32 cast 0 != if
       ThreadId optional.empty return
     end
     res optional.wrap return
