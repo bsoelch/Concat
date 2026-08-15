@@ -1,15 +1,19 @@
-namespace: sys
+"mutexAMD64.s" ..include
+namespace: c
   proc.c( i32 ptr.mut -> ) : extern: cctLockAcquire
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
 end
 namespace: thread
+  proc( -> ) =>: export: yield
+    ## TODO! suspend thread
+  end
   i32 ptr.mut =:: Lock
-  proc.c( i32 ptr.mut -> Lock ) =>: export: createLock
+  proc( i32 ptr.mut -> Lock ) =>: export: createLock
     Lock cast
   end
-  proc.c( Lock -> ) =>: export: acquireLock
-    i32 ptr.mut cast sys.cctLockAcquire
+  proc( Lock -> ) =>: export: acquireLock
+    i32 ptr.mut cast c.cctLockAcquire
   end
   #+ returns false is successfull and true if lock already active
     example usage:
@@ -18,11 +22,11 @@ namespace: thread
     end
     ... locked
   +#
-  proc.c( Lock -> bool ) =>: export: tryAcquireLock
-    i32 ptr.mut cast sys.cctLockTryAcquire
+  proc( Lock -> bool ) =>: export: tryAcquireLock
+    i32 ptr.mut cast c.cctLockTryAcquire
   end
-  proc.c( Lock -> ) =>: export: releaseLock
-    i32 ptr.mut cast sys.cctLockRelease if
+  proc( Lock -> ) =>: export: releaseLock
+    i32 ptr.mut cast c.cctLockRelease if
       "released lock was not held" ..panic
     end
   end
