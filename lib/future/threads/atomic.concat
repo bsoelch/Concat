@@ -1,0 +1,8 @@
+"atomicAMD64.s" ..include
+namespace: c
+  ## TODO? make built-in
+  proc.c( i32 ptr.mut -> ) : extern: cctAtomicIncI32
+end
+namespace: i32
+  proc.c( i32 ptr.mut -> ) : extern: export: alias: atomicInc c.cctAtomicIncI32
+end

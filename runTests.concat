@@ -5,6 +5,7 @@
 'exec' import
 'future/threads/threads' import
 'future/threads/queue' import
+'future/threads/atomic' import
 
 { "./tests":s } =:: DEFAULT_TESTS
 { "./tests":s "./examples":s } =:: DEFAULT_TESTS_FULL
@@ -20,9 +21,7 @@ sb.empty =:: mut: BASE_PATH
 char8 slice.mut threads.mtQueue : mut: MT_QUEUE
 
 proc( string : filePath -> ) =>: runTest
-  MT_QUEUE..lock@ thread.createLock thread.acquireLock
-  TESTED 1 + TESTED= ## TODO: atomic increment
-  MT_QUEUE..lock@ thread.createLock thread.releaseLock
+  TESTED@ i32.atomicInc
   filePath $ '.' string.lastIndexOf .if string.head end =:: basePath
   basePath .length 3 + sb.create
     basePath sb.appendStr ".in\x00":s sb.appendStr
@@ -99,7 +98,7 @@ proc( string : filePath -> ) =>: runTest
   file.close
   MT_QUEUE..lock@ thread.createLock thread.acquireLock
   outputEqual and errorsEqual if
-    PASSED 1 + PASSED= ## TODO: atomic increment
+    PASSED 1 + PASSED= ## does not need to be atomic as we are already in locked context
     "PASSED: ":s io.print basePath io.println
     ## cleanup temporary files
     tmpPath
@@ -119,7 +118,6 @@ proc( string : filePath -> ) =>: runTest
     tmpPath sb.asStr false file.delete ..drop
   else
     "FAILED: ":s io.print basePath io.println
-    ## TODO: lock list access
     FAILED
       filePath string.copy list.append
     FAILED=
@@ -134,7 +132,7 @@ proc( char8 slice.mut : filePath -> ) =>: runTestAsync
 end
 proc.c( i32 -> ) =>: testWorker
   ..drop
-  while MT_QUEUE .active do
+  while MT_QUEUE .active or MT_QUEUE .head MT_QUEUE .tail != do
     MT_QUEUE@ threads.mtQueue.tryPop .else
       thread.yield continue
     end
@@ -280,11 +278,12 @@ proc( -> ) =>: export: main
       end
     end
     testPaths for runTestsInDir end
-    THREAD_COUNT 0 u> if
-      MT_QUEUE@ threads.mtQueue.finish
-    end
+    false MT_QUEUE..active= ## no longer actively pushing new data
     $ for
       thread.join ..drop
+    end
+    THREAD_COUNT 0 u> if
+      MT_QUEUE@ threads.mtQueue.finish
     end
   list.free ..drop
   ## TODO: join thread pool

@@ -3,10 +3,12 @@ namespace: c
   proc.c( i32 ptr.mut -> ) : extern: cctLockAcquire
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockTryAcquire
   proc.c( i32 ptr.mut -> bool ) : extern: cctLockRelease
+  ## TODO? make built-in
+  proc.c( -> ) : extern: cctThreadYield
 end
 namespace: thread
   proc( -> ) =>: export: yield
-    ## TODO! suspend thread
+    c.cctThreadYield
   end
   i32 ptr.mut =:: Lock
   proc( i32 ptr.mut -> Lock ) =>: export: createLock
