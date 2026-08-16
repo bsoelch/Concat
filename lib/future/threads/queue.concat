@@ -1,0 +1,72 @@
+"../../slice" import
+"mutex" import
+
+namespace: threads
+  ( type : T -> type ) =>: export: mtQueue
+    struct(
+      T slice.mut : data
+      iSize : head
+      iSize : tail
+      i32 : lock
+      bool : active
+    )
+  end
+  namespace: mtQueue
+    proc( iSize : cap type : T -> T mtQueue ) =>: export: create
+      cap T slice.new 0 0 0 true T mtQueue new
+    end
+    proc( type : auto: T  T mtQueue ptr.mut  T -> bool ) =>: export: tryPush
+      <$
+        $ [] .head 1 + $1 [] .data .length u% $1 [] .tail == if
+          ..drop.2 true return ## queue is full
+        end
+      $ .lock thread.createLock
+        $ thread.tryAcquireLock if ..drop.3 true return end
+        ## val queue lock
+        $1 [] .head 1 + $2 [] .data .length u% =:: newHead
+        newHead $2 [] .tail == if
+          thread.releaseLock
+          ..drop.2 true return ## queue is full
+        end
+        $1 [] .head =:: oldHead
+        newHead $2 .head=
+        ## lock val queue
+        <<$ [] .data oldHead =[]
+      thread.releaseLock
+      false return
+    end
+    proc( type : auto: T  T mtQueue ptr.mut -> T optional ) =>: export: tryPop
+      $ [] .head $1 [] .tail == if
+        ..drop { } return ## queue is empty
+      end
+      $ .lock thread.createLock
+        $ thread.tryAcquireLock if ..drop.2 { } return end
+        $1 [] .head $2 [] .tail == if
+          thread.releaseLock
+          ..drop { } return ## queue is empty
+        end
+        $1 [] .tail 1 + $2 [] .data .length u% =:: newTail
+        $1 [] .tail =:: oldTail
+        newTail $2 .tail=
+        ## lock queue
+        <$ [] .data oldTail [] <$
+      thread.releaseLock
+      optional.wrap return
+    end
+    proc( type : auto: T  T mtQueue ptr.mut T -> ) =>: export: push
+      while $1 $1 tryPush do thread.yield end ..drop.2
+    end
+    proc( type : auto: T  T mtQueue ptr.mut -> T ) =>: export: pop
+      while true do
+        $ .data [] .length 0 == if thread.yield continue end
+        $ tryPop .if >$ ..drop return end
+      end
+    end
+    proc( type : auto: T  T mtQueue ptr.mut -> ) =>: export: finish
+      while $ .data [] .length 0 != do
+        thread.yield
+      end
+      $ [] .data slice.free >$ .data=
+    end
+  end
+end
