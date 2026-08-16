@@ -58,15 +58,16 @@ namespace: threads
     end
     proc( type : auto: T  T mtQueue ptr.mut -> T ) =>: export: pop
       while true do
-        $ .data [] .length 0 == if thread.yield continue end
+        $ [] .head $1 [] .tail == if thread.yield continue end
         $ tryPop .if >$ ..drop return end
       end
     end
     proc( type : auto: T  T mtQueue ptr.mut -> ) =>: export: finish
-      while $ .data [] .length 0 != do
+      while $ [] .head $1 [] .tail != do
         thread.yield
       end
-      $ [] .data slice.free >$ .data=
+      $ [] .data slice.free $1 .data=
+      false >$ .active=
     end
   end
 end

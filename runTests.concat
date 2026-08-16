@@ -3,6 +3,8 @@
 'print' import
 'file' import
 'exec' import
+'future/threads/threads' import
+'future/threads/queue' import
 
 { "./tests":s } =:: DEFAULT_TESTS
 { "./tests":s "./examples":s } =:: DEFAULT_TESTS_FULL
@@ -15,9 +17,12 @@ string list.empty =:: mut: CCT_ARGS
 0 =:: mut: PASSED
 string list.empty =:: mut: FAILED
 sb.empty =:: mut: BASE_PATH
+char8 slice.mut threads.mtQueue : mut: MT_QUEUE
 
 proc( string : filePath -> ) =>: runTest
+  MT_QUEUE..lock@ thread.createLock thread.acquireLock
   TESTED 1 + TESTED= ## TODO: atomic increment
+  MT_QUEUE..lock@ thread.createLock thread.releaseLock
   filePath $ '.' string.lastIndexOf .if string.head end =:: basePath
   basePath .length 3 + sb.create
     basePath sb.appendStr ".in\x00":s sb.appendStr
@@ -92,6 +97,7 @@ proc( string : filePath -> ) =>: runTest
     sb.free ..drop
     progamErrors sb.free ..drop
   file.close
+  MT_QUEUE..lock@ thread.createLock thread.acquireLock
   outputEqual and errorsEqual if
     PASSED 1 + PASSED= ## TODO: atomic increment
     "PASSED: ":s io.print basePath io.println
@@ -118,18 +124,32 @@ proc( string : filePath -> ) =>: runTest
       filePath string.copy list.append
     FAILED=
   end
+  MT_QUEUE..lock@ thread.createLock thread.releaseLock
   outPath sb.free ..drop
   errPath sb.free ..drop
   tmpPath sb.free ..drop
 end
 proc( char8 slice.mut : filePath -> ) =>: runTestAsync
-  filePath slice.freeze string.fromChars =:: filePathStr
-  ## TODO: run test asynchronously using thread-pool
-  filePathStr runTest
-  filePath slice.free ..drop
+  MT_QUEUE@ filePath threads.mtQueue.push
+end
+proc.c( i32 -> ) =>: testWorker
+  ..drop
+  while MT_QUEUE .active do
+    MT_QUEUE@ threads.mtQueue.tryPop .else
+      thread.yield continue
+    end
+      $ slice.freeze string.fromChars runTest
+    slice.free ..drop
+  end
+  thread.exit
 end
 
 proc( file.File -> file.File ) =>: runTestsInDirImpl
+  BASE_PATH
+    $ .length 0 != and $ $ .length 1 - [] '\x00' == if
+      $ .length 1 - sb.setLength ## discard null-terminator
+    end
+  BASE_PATH=
   $ file.entries for =:: fileName
     BASE_PATH
       $ .length =:: offset
@@ -139,9 +159,6 @@ proc( file.File -> file.File ) =>: runTestsInDirImpl
     BASE_PATH=
     BASE_PATH sb.asStr file.OpenMode .DIR file.open
       $ file.isDir if
-        BASE_PATH
-          $ .length 1 - sb.setLength ## discard null-terminator
-        BASE_PATH=
         runTestsInDirImpl
       end
     file.close
@@ -166,6 +183,7 @@ proc( string : dirName -> ) =>: runTestsInDir
   BASE_PATH sb.asStr file.OpenMode .DIR file.open
     $ file.isDir if
       runTestsInDirImpl
+      file.close return
     end
   file.close
   dirName ".concat":s string.endsWith if
@@ -240,8 +258,9 @@ proc( -> ) =>: export: main
     CCT_ARGS for ' ' io.print io.print end '\n' io.print
   end
   threadCountStr .length 0 != if
-    threadCountStr 10 number.tryParseUInt .NONE ! if
-      "could not parse thread count, expected unsigned integer got: ":s io.print threadCountStr io.println
+    threadCountStr 10 i32.parse number.uintOk .Ok ?? .else
+      "could not parse thread count, expected unsigned (32-bit) integer got: ":s io.print threadCountStr io.println
+      0
     end
     $ 255 > if ..drop 255
       "thread count can be at most 255 got: ":s io.print threadCountStr io.println
@@ -250,11 +269,24 @@ proc( -> ) =>: export: main
       "running asynchronously on ":s io.print $ io.print " threads":s io.println
     end
   else 0 end i32 cast.u THREAD_COUNT=
-  THREAD_COUNT 0 u> if
-    ## TODO: prepare thread-pool
-    "! multi-threading is not supported!":s io.println
-  end
-  testPaths for runTestsInDir end
+  0 thread.ThreadId list.create
+    THREAD_COUNT 0 u> if
+      ## TODO: would it be more efficient to first collect all paths and then run tests in batches spread accross threads
+      300 char8 slice.mut threads.mtQueue.create MT_QUEUE=
+      THREAD_COUNT for
+        testWorker@ >$ thread.create .else
+          "failed to create worker thread" ..panic
+        end list.append
+      end
+    end
+    testPaths for runTestsInDir end
+    THREAD_COUNT 0 u> if
+      MT_QUEUE@ threads.mtQueue.finish
+    end
+    $ for
+      thread.join ..drop
+    end
+  list.free ..drop
   ## TODO: join thread pool
   PASSED TESTED == if
     "SUCCESS: passed ":s io.print
