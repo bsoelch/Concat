@@ -11,11 +11,12 @@ common first step for all compiler back-ends:
 "branchTree" import
 using id.IdentifierFlag
 
+enum( BOOL I8 I16 I32 I64 F16 F32 F64 PTR FPTR ) =:: ValType
 union(
-  _ : Value
-  Type : Reference
-  Type : Val2
-  Type : Val3
+  _ : Reference
+  ValType : Value
+  ( ValType ValType ) : Val2
+  ( ValType ValType ValType ) : Val3
 ) =:: StackValue
 
 struct(
@@ -325,6 +326,19 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
     nameOffset list.setLength
   program .nameBuffer=
 end
+proc(
+  Type : expectedType ## expected type of value
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> ) =>: decayReference
+  context [] .program =:: program
+  program .errors =:: errors
+  context .stack branchTree.pop .else
+    "stack-underflow" sb.copyPtr pos errors appendError return
+  end .Reference ? if
+    ## TODO! generate OP to decay reference to value
+  end
+end
 
 proc(
   Operation list : newOps
@@ -339,55 +353,50 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
-    EndProc case ## no stack change
+    EndProc PanicWithMessage case ## no stack change
       newOps op list.append return
     break
     ProcPtr case ## push value
       _VAL_TYPES_ if
-        context .stack StackValue .Value branchTree.push
+        context .stack ValType .FPTR StackValue .Value branchTree.push
       end
       newOps op list.append return
     break
     AutoCast Cast Cast! BitCast case ## unary operation
-      ## TODO: decay references
-      ## TODO? can casts change val-type
-      newOps op list.append return
-    break
-    PanicWithMessage case
-      ## TODO: decay references
+      _VAL_TYPES_ if
+        ## TODO: decay references, update val-type
+      end
       newOps op list.append return
     break
     RuntimeAssert case
       _VAL_TYPES_ if
-        context .stack branchTree.pop <unwrap> =:: condition
-        condition .Reference ?? .if ..drop
-          ## TODO: decay reference
-        end
+        types.primitive.BOOL op .pos context decayReference
       end
       newOps op list.append return
     break
     Switch case
       _VAL_TYPES_ if
-        context .stack branchTree.pop <unwrap> =:: condition
-        condition .Reference ?? .if ..drop
-          ## TODO: decay reference
-        end
+        op .dataType op .pos context decayReference
       end
       ## TODO: update branches
       newOps op list.append return
     break
-    BuiltIn case
-      ## TODO: update stack
+    BuiltIn .case
+      _VAL_TYPES_ if ..drop
+        ## TODO: update stack
+      else ..drop end
       newOps op list.append return
     break
-    StackMod case
-      ## TODO: update stack
-      ## TODO: re-compute offsets
+    StackMod .case
+      _VAL_TYPES_ if ..drop
+        ## TODO: update stack
+        ## TODO: change offsets in op
+      else ..drop end
       newOps op list.append return
     break
     AtId .case =:: idInfo
       _VAL_TYPES_ if
-        context .stack StackValue .Value branchTree.push
+        context .stack ValType .PTR StackValue .Value branchTree.push
       end
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
