@@ -11,12 +11,21 @@ common first step for all compiler back-ends:
 "branchTree" import
 using id.IdentifierFlag
 
-enum( BOOL I8 I16 I32 I64 F16 F32 F64 PTR FPTR ) =:: ValType
+## TODO? bit-field/vector-types: BITS32 BITS64 V64 V128 V256
+enum(
+  BOOL
+  I8 I16 I32 I64
+  F16 F32 F64
+  PTR FPTR
+) =:: ValType
 union(
   _ : Reference
   ValType : Value
   ( ValType ValType ) : Val2
   ( ValType ValType ValType ) : Val3
+  ## TODO: seperate StackValues for compressed composites (needed for C ABI)
+  ## ValType : Composite
+  ## ( ValType ValType ) : Composite2
 ) =:: StackValue
 ## TODO change PreCompiler to output lower-level IR
 ## * only support primitive types and pointers, no composites (except for data-layout and c-call handling)
@@ -386,7 +395,7 @@ proc(
 end
 
 proc(
-  Operation list : newOps
+  Operation list
   Operation : mut: op
   ConverterContext ptr.mut : context
 -> Operation list ) =>: compileOp
@@ -397,31 +406,31 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   op .val switch
-    NOP case newOps return ## ignore no-ops
+    NOP case return ## ignore no-ops
     EndProc PanicWithMessage case ## no stack change
-      newOps op list.append return
+      op list.append return
     break
     ProcPtr case ## push value
       context .stack ValType .FPTR StackValue .Value branchTree.push
-      newOps op list.append return
+      op list.append return
     break
     AutoCast Cast Cast! BitCast case ## unary operation
       ## TODO: decay references, update val-type
-      newOps op list.append return
+      op list.append return
     break
     RuntimeAssert case
       types.primitive.BOOL op .pos context decayReference
-      newOps op list.append return
+      op list.append return
     break
     Switch case
       op .dataType op .pos context decayReference
       ## TODO: update branches
-      newOps op list.append return
+      op list.append return
     break
     BuiltIn .case
       ## TODO: update stack
       ..drop
-      newOps op list.append return
+      op list.append return
     break
     StackMod .case $ .modType switch
         DROP case
@@ -435,10 +444,8 @@ proc(
                 end
               end
             end
-          newOps
-            >$ StackModType .DROP op .pos opStackMod
-          list.append return
-        break
+          >$ StackModType .DROP op .pos opStackMod list.append
+        return
         COPY case
           "unimplemented: copy" ..panic
         break
@@ -449,7 +456,6 @@ proc(
     break
     AtId .case =:: idInfo
       context .stack ValType .PTR StackValue .Value branchTree.push
-      newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
             idInfo op .pos
@@ -471,14 +477,11 @@ proc(
         end
       switch
         Value .case
-          newOps
-            op list.append ## element access on value-type
-          return
-        break
+          op list.append ## element access on value-type
+        return
         Val2 Val3 case "unimplemented: get/set multi-value" ..panic
         Reference case break
       end
-      newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId
             idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -492,18 +495,55 @@ proc(
         end
       return
     break
-    ## TODO vvv------vvvv do stack updates + split composites
+    ## TODO: vvvv --- do stack-updates --- vvvv
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else
-      op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
+      .else op .dataType program toValType switch
+        Reference case op .dataType break
+        Value case return ## <0>
+        Val2 .case ## <0> <1>
+          op .dataType typeContext types.compositeEltCount 2 u< if
+            return
+          else op .dataType typeContext types.compositeEltCount 2 u> _if
+            "unexpected data-type for Val2 " sb.copyPtr
+              op .dataType typeContext sb.appendType
+            op. pos errors appendError
+            return
+          end
+          index 0 == if
+            1 StackModType .DROP op .pos opStackMod list.append
+          else index 1 == _if
+            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
+            1 StackModType .DROP op .pos opStackMod list.append ## drop
+          else
+            "index for two-value element should be 0 or 1" ..panic
+          end
         return
-      else op .dataType end =:: refBase
-      newOps
-        refBase index op .pos typeContext applyElementOffset =:: eltType
+        Val3 .case ## <0> <1> <2>
+          op .dataType typeContext types.compositeEltCount 2 u< if
+            return
+          else op .dataType typeContext types.compositeEltCount 2 == _if
+            "unimplemented: two-element Val3" ..panic
+          else op .dataType typeContext types.compositeEltCount 3 u> _if
+            "unexpected data-type for Val3 " sb.copyPtr
+              op .dataType typeContext sb.appendType
+            op. pos errors appendError
+            return
+          end
+          index 0 == if
+            2 StackModType .DROP op .pos opStackMod list.append
+          else index 1 == _if
+            2 StackModType .ROTATE op .pos opStackMod list.append ## >>$
+            2 StackModType .DROP op .pos opStackMod list.append
+          else index 2 == _if
+            -2 StackModType .ROTATE op .pos opStackMod list.append ## <<$
+            2 StackModType .DROP op .pos opStackMod list.append
+          else
+            "index for three-value element should be 0, 1 or 2" ..panic
+          end
+        return
+      end end index op .pos typeContext applyElementOffset =:: eltType
         isPtr ! and eltType typeContext types.isValueType if
           ## TODO? delayed dereferencing of value-types
           ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
@@ -514,18 +554,62 @@ proc(
     SetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else
-      op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
+      .else op .dataType program toValType switch
+        Reference case op .dataType break
+        Value case ## <v> <0>
+          1 StackModType .DROP op .pos opStackMod list.append
         return
-      else op .dataType end =:: refBase
-      newOps
-        isPtr ! if ## preserve value on stack
+        Val2 .case ## <v> <0> <1>
+          op .dataType typeContext types.compositeEltCount 2 u< if
+            2 StackModType .DROP op .pos opStackMod list.append return
+          else op .dataType typeContext types.compositeEltCount 2 u> _if
+            "unexpected data-type for Val2 " sb.copyPtr
+              op .dataType typeContext sb.appendType
+            op. pos errors appendError
+            return
+          end
+          index 0 == if
+            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
+            1 StackModType .DROP op .pos opStackMod list.append ## drop
+          else index 1 == _if
+            1 StackModType .DROP op .pos opStackMod list.append ## drop
+            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
+          else
+            "index for two-value element should be 0 or 1" ..panic
+          end
+        return
+        Val3 .case ## <v> <0> <1> <2>
+          op .dataType typeContext types.compositeEltCount 2 u< if
+            3 StackModType .DROP op .pos opStackMod list.append return
+          else op .dataType typeContext types.compositeEltCount 2 == _if
+            "unimplemented: two-element Val3" ..panic
+          else op .dataType typeContext types.compositeEltCount 3 u> _if
+            "unexpected data-type for Val3 " sb.copyPtr
+              op .dataType typeContext sb.appendType
+            op. pos errors appendError
+            return
+          end
+          index 0 == if
+            2 StackModType .ROTATE op .pos opStackMod list.append ## <v> <1> <2> <0>
+            1 StackModType .DROP op .pos opStackMod list.append ## <v> <1> <2>
+          else index 1 == _if
+            3 StackModType .ROTATE op .pos opStackMod list.append ## <0> <1> <2> <v>
+            -2 StackModType .ROTATE op .pos opStackMod list.append ## <0> <v> <1> <2>
+            1 StackModType .ROTATE op .pos opStackMod list.append ## <0> <v> <2> <1>
+            1 StackModType .DROP op .pos opStackMod list.append ## <0> <v> <2>
+          else index 2 == _if
+            1 StackModType .DROP op .pos opStackMod list.append ## <v> <0> <1>
+            2 StackModType .ROTATE op .pos opStackMod list.append ## <0> <1> <v>
+          else
+            "index for three-value element should be 0, 1 or 2" ..panic
+          end
+        return
+      end end
+        isPtr ! if ## preserve reference on stack
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
         end
-        refBase index op .pos typeContext applyElementOffset
+      index op .pos typeContext applyElementOffset
           $ typeContext types.isValueType if
             BuiltIn .SET_PTR
           else
@@ -537,18 +621,23 @@ proc(
     SetNestedElement .case =:: path
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else
-      op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
+      .else op .dataType program toValType switch
+        Reference case op .dataType break
+        Value case ## <v> <0>
+          1 StackModType .DROP op .pos opStackMod list.append
         return
-      else op .dataType end =:: mut: eltType
-      newOps
+        Val2 .case ## <v> <0> <1>
+          "unimplemented: nested set-element for Val2" ..panic
+        return
+        Val3 .case ## <v> <0> <1> <2>
+          "unimplemented: nested set-element for Val3" ..panic
+        return
+      end end =:: mut: eltType
         isPtr ! if ## preserve value on stack
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
         end
-      =:: shadow: mut: newOps
+      =:: mut: newOps
         ( Operation list ptr.mut : ops Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
         path ( i32 : index Curry : curry -> ) =>
           curry .ops []
@@ -567,6 +656,7 @@ proc(
         op .pos opBuiltIn list.append
       return
     break
+    ## TODO vvv------vvvv split composites
     ImplementProcedure case
       op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
       outArgNames slice.copy context .outArgNames=
@@ -592,7 +682,6 @@ proc(
           VariableInfo new list.append
         finally i 1 + end ..drop
       context .variables=
-      newOps
         op
           procType >$ .dataType=
         list.append
@@ -605,34 +694,27 @@ proc(
           VariableType .LOCAL_VAR
         VariableInfo new list.append
       context .variables=
-      newOps
-        op list.append ## nothing to change
-      return
+      op list.append return ## nothing to change
     Constant .case =:: constVal
       op .dataType typeContext types.isValueType if
-        newOps
-          op list.append
-        return
+        op list.append return
       end
-      newOps
-        constVal op .dataType op .pos program opConstReference list.append
-      return
+      constVal op .dataType op .pos program opConstReference list.append return
     Copy case
       op .dataType =:: baseType
       _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
-          newOps return ## copy of value type is no-op
+          return ## copy of value type is no-op
         end
       else
         baseType typeContext types.unwrapNamed types.isPrimitive or
             baseType typeContext types.isPointer if
-          newOps return ## primitive copy is no-op
+          return ## primitive copy is no-op
         end
       end
       baseType true op .pos context newTmpVar =:: tmpId
-      newOps
         op .dataType baseType types.typeEquals ! if
           ## opAutoCast
             op .dataType
@@ -653,12 +735,9 @@ proc(
       return
     New NewUnion case
       op .dataType typeContext types.isValueType if
-        newOps
-          op list.append
-        return
+        op list.append return
       end
       op .dataType true op .pos context newTmpVar =:: tmpId
-      newOps
         ## opDeclareId
           op .dataType
           tmpId
@@ -705,7 +784,7 @@ proc(
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
-      newOps =:: mut: shadow: newOps
+      newOps =:: mut: newOps
       calledType newOps@
         op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
       op .pos context updateProcType =:: outArgNames =:: newProcType
@@ -745,7 +824,6 @@ proc(
       retType typeContext types.getProcOut .if .length i32 cast.u else 0 end
         _BACKEND_ .QBE if context .outArgNames [] .length i32 cast.u + end
       =:: mut: stackValCount
-      newOps
         context .outArgNames [] for .else
             continue
           end =:: retName
@@ -778,23 +856,19 @@ proc(
       labelInfo .labelType switch
         HINT_START HINT_END case
           ## move mergable operation after start hint
-          newOps list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
-            newOps
-              list.pop optional.unwrap =:: tmp
-              op list.append
-              tmp list.append
+          $ list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
+            list.pop optional.unwrap =:: tmp
+            op list.append
+            tmp list.append
             return
           end
         break
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
-      newOps
-        op list.append
-      return
+      op list.append return
     break
     LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
-      newOps
       ## fuse compare+jumpif
         jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
           jumpInfo .cmpType =:: mut: newCmpType
@@ -815,15 +889,14 @@ proc(
         end
       op list.append
     return
-    CompilerInfo case ## TODO? preserve compilerInfo ops
-      newOps return
+    CompilerInfo case return ## TODO? preserve compilerInfo ops
     ConstantReference Error case
       break ## unsupported
   end
   "unsupported operation " sb.copyPtr
     op program sb.appendOp
   op .pos errors appendError
-  newOps return
+  return
 end
 
 proc(
