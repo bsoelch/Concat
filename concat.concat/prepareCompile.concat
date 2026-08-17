@@ -326,6 +326,32 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
     nameOffset list.setLength
   program .nameBuffer=
 end
+
+proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue ) =>: toValType
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  typeContext types.unwrapNamed .PrimitiveType .if switch
+      BOOL case ValType .BOOL break
+      I8  case ValType .I8 break
+      I16 case ValType .I16 break
+      I32 case ValType .I32 break
+      I64 case ValType .I64 break
+      F16 case ValType .F16 break
+      F32 case ValType .F32 break
+      F64 case ValType .F64 break
+      TYPE case ValType .PTR break
+    end StackValue .Value return
+  else $ typeContext types.isCallable _if ..drop
+    ValType .FPTR StackValue .Value return
+  else $ typeContext types.isPointer _if ..drop
+    ValType .PTR StackValue .Value return
+  end
+  ## TODO support composite values
+  "cannot determine ValType of " sb.copyPtr
+    >$ typeContext sb.appendType
+  pos errors appendError
+  StackValue .Reference return
+end
 proc(
   Type : expectedType ## expected type of value
   FilePosition ptr : pos
@@ -333,10 +359,26 @@ proc(
 -> ) =>: decayReference
   context [] .program =:: program
   program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
   context .stack branchTree.pop .else
     "stack-underflow" sb.copyPtr pos errors appendError return
   end .Reference ? if
-    ## TODO! generate OP to decay reference to value
+    expectedType pos program toValType switch
+      Reference case
+        "cannot dereference " sb.copyPtr
+          expectedType typeContext sb.appendType
+        pos errors appendError return
+      break
+      Value .case
+        "unimplemented: deref" ..panic
+      break
+      Val2 .case
+        "unimplemented: deref val2" ..panic
+      break
+      Val3 .case
+        "unimplemented: deref val3" ..panic
+      break
+    end
   end
 end
 
@@ -388,9 +430,30 @@ proc(
       newOps op list.append return
     break
     StackMod .case
-      _VAL_TYPES_ if ..drop
-        ## TODO: update stack
-        ## TODO: change offsets in op
+      _VAL_TYPES_ if
+        $ .modType switch
+          DROP case
+            0
+              >$ .n for ..drop
+                context .stack branchTree.pop .if
+                  switch
+                    Reference Value case 1 + break
+                    Val2 case 2 + break
+                    Val3 case 3 + break
+                  end
+                end
+              end
+            newOps
+              >$ StackModType .DROP op .pos opStackMod
+            list.append return
+          break
+          COPY case
+            "unimplemented: copy" ..panic
+          break
+          ROTATE case
+            "unimplemented: rotate" ..panic
+          break
+        end
       else ..drop end
       newOps op list.append return
     break
