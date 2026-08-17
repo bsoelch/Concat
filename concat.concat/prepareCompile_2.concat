@@ -11,9 +11,21 @@ common first step for all compiler back-ends:
 "branchTree" import
 using id.IdentifierFlag
 
+enum( BOOL I8 I16 I32 I64 F16 F32 F64 PTR FPTR ) =:: ValType
+union(
+  _ : Reference
+  ValType : Value
+  ( ValType ValType ) : Val2
+  ( ValType ValType ValType ) : Val3
+) =:: StackValue
+## TODO change PreCompiler to output lower-level IR
+## * only support primitive types and pointers, no composites (except for data-layout and c-call handling)
+## should allow backends to focus on register-allocation
+
 struct(
   ProgramContext ptr.mut : program
   VariableInfo list : variables
+  StackValue BranchTree : stack
   NameId optional slice.mut : outArgNames
   Type optional : currentProcType
   FileId : currentFile
@@ -318,6 +330,61 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   program .nameBuffer=
 end
 
+proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue ) =>: toValType
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  typeContext types.unwrapNamed .PrimitiveType .if switch
+      BOOL case ValType .BOOL break
+      I8  case ValType .I8 break
+      I16 case ValType .I16 break
+      I32 case ValType .I32 break
+      I64 case ValType .I64 break
+      F16 case ValType .F16 break
+      F32 case ValType .F32 break
+      F64 case ValType .F64 break
+      TYPE case ValType .PTR break
+    end StackValue .Value return
+  else $ typeContext types.isCallable _if ..drop
+    ValType .FPTR StackValue .Value return
+  else $ typeContext types.isPointer _if ..drop
+    ValType .PTR StackValue .Value return
+  end
+  ## TODO support composite values
+  "cannot determine ValType of " sb.copyPtr
+    >$ typeContext sb.appendType
+  pos errors appendError
+  StackValue .Reference return
+end
+proc(
+  Type : expectedType ## expected type of value
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> ) =>: decayReference
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  context .stack branchTree.pop .else
+    "stack-underflow" sb.copyPtr pos errors appendError return
+  end .Reference ? if
+    expectedType pos program toValType switch
+      Reference case
+        "cannot dereference " sb.copyPtr
+          expectedType typeContext sb.appendType
+        pos errors appendError return
+      break
+      Value .case
+        "unimplemented: deref" ..panic
+      break
+      Val2 .case
+        "unimplemented: deref val2" ..panic
+      break
+      Val3 .case
+        "unimplemented: deref val3" ..panic
+      break
+    end
+  end
+end
+
 proc(
   Operation list : newOps
   Operation : mut: op
@@ -331,11 +398,57 @@ proc(
   typeContext .nameContext =:: nameContext
   op .val switch
     NOP case newOps return ## ignore no-ops
-    EndProc PanicWithMessage ProcPtr AutoCast Cast Cast! BitCast
-        RuntimeAssert Switch BuiltIn StackMod case ## unary operation
+    EndProc PanicWithMessage case ## no stack change
       newOps op list.append return
     break
+    ProcPtr case ## push value
+      context .stack ValType .FPTR StackValue .Value branchTree.push
+      newOps op list.append return
+    break
+    AutoCast Cast Cast! BitCast case ## unary operation
+      ## TODO: decay references, update val-type
+      newOps op list.append return
+    break
+    RuntimeAssert case
+      types.primitive.BOOL op .pos context decayReference
+      newOps op list.append return
+    break
+    Switch case
+      op .dataType op .pos context decayReference
+      ## TODO: update branches
+      newOps op list.append return
+    break
+    BuiltIn .case
+      ## TODO: update stack
+      ..drop
+      newOps op list.append return
+    break
+    StackMod .case $ .modType switch
+        DROP case
+          0
+            >$ .n for ..drop
+              context .stack branchTree.pop .if
+                switch
+                  Reference Value case 1 + break
+                  Val2 case 2 + break
+                  Val3 case 3 + break
+                end
+              end
+            end
+          newOps
+            >$ StackModType .DROP op .pos opStackMod
+          list.append return
+        break
+        COPY case
+          "unimplemented: copy" ..panic
+        break
+        ROTATE case
+          "unimplemented: rotate" ..panic
+        break
+      end
+    break
     AtId .case =:: idInfo
+      context .stack ValType .PTR StackValue .Value branchTree.push
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -346,12 +459,24 @@ proc(
         end
       return
     break
-    ## TODO vvv------vvvv do stack updates + split composites
     GetId SetId .case =:: idInfo
-      op .dataType typeContext types.isValueType if
-        newOps
-          op list.append ## element access on value-type
-        return
+      op .dataType program toValType
+        op .val .GetId ? if
+          context .stack $1 branchTree .push
+        else
+          op .dataType op .pos context decayReference
+          context .stack $1 branchTree .pop .if
+            ..drop ## TODO? verify that source and target value match
+          end
+        end
+      switch
+        Value .case
+          newOps
+            op list.append ## element access on value-type
+          return
+        break
+        Val2 Val3 case "unimplemented: get/set multi-value" ..panic
+        Reference case break
       end
       newOps
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
@@ -367,6 +492,7 @@ proc(
         end
       return
     break
+    ## TODO vvv------vvvv do stack updates + split composites
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
@@ -516,7 +642,7 @@ proc(
           opAutoCast list.append
         end
         baseType tmpId op .pos opDeclareId list.append
-        baseType typeContext types.isValueType ! if
+        baseType typeContext types.isValueType ! if ## when _QBE_VAL_TYPES_ is false baseType this can be a non-value type
           baseType tmpId op .pos opAtId list.append
           baseType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
           baseType tmpId op .pos opAtId list.append
@@ -732,6 +858,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
   ## ConverterContext
     program
     0 VariableInfo list.create
+    StackValue branchTree.create
     NameId optional slice.emptyMutable
     Type optional.empty
     -1:FileId
@@ -761,4 +888,5 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
     convertProc impl .codeState .PreCompiled=
   end
   tmpOps list.free ..drop
+  context .stack branchTree.free
 end
