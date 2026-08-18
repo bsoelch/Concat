@@ -26,6 +26,11 @@ union(
   ## TODO: seperate StackValues for compressed composites (needed for C ABI)
   ## ValType : Composite
   ## ( ValType ValType ) : Composite2
+  ## ValType : UnionElement
+  ## ( ValType ValType ) : UnionElement2
+  ## ( ValType ValType ValType ) : UnionElement3
+  ## ( ValType ValType ) : TaggedUnionElement
+  ## ( ValType ValType ValType ) : TaggedUnionElement2
 ) =:: StackValue
 proc( StackValue -> i32 ) =>: stackValSlots
   switch
