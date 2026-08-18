@@ -3146,31 +3146,31 @@ proc(
           $ ? =:: isPtr
         .if >$ ..drop end
       0 ElementInfo new =:: mut: eltInfo
-      ( ElementInfo ptr.mut : shadow: eltInfo CompilerContext ptr.mut : shadow: context FilePosition ptr : pos ) =:: Curry
-      path ( i32 : index Curry : curry -> ) =>
+      ( CompilerContext ptr.mut : shadow: context FilePosition ptr : pos ) =:: Curry
+      path eltInfo ( ElementInfo i32 : index Curry : curry -> ElementInfo ) =>
         curry .context [] .program .errors =:: shadow: errors
         curry .context [] .program .idContext .typeContext =:: shadow: typeContext
-        curry .eltInfo [] .eltType
+        $ .eltType
           $ typeContext types.getArrayBaseType .if
             >$ curry .pos curry .context typeStrideInt index i64 cast.u *
-              curry .eltInfo [] .offset +
-            curry .eltInfo .offset=
+              $2 .offset +
+            >>$ .offset= <$
           else $ typeContext types.isRawUnion _if
             index typeContext types.compositeGetElement .else
               "missing composite element" ..panic
             end
           else
             $ index curry .pos curry .context tupleEltOffsetInt
-              curry .eltInfo [] .offset +
-            curry .eltInfo .offset=
+              $2 .offset +
+            >>$ .offset= <$
             index typeContext types.compositeGetElement .else
               "missing composite element" ..panic
             end
           end
-        curry .eltInfo .eltType=
-      end eltInfo@ context op [] .pos Curry new NestedElementPath.forEach
-      eltInfo .eltType =:: eltType
-      eltInfo .offset =:: offset
+        >$ .eltType=
+      end context op [] .pos Curry new NestedElementPath.forEach
+      $ .eltType =:: eltType
+      .offset =:: offset
       ## TODO! extract element-set to procedure (merge occurences in setElement,setNestedElement and setUnionElement)
       sb
         op [] .pos context popValue =:: structId

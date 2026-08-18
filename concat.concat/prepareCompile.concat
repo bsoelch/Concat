@@ -422,16 +422,12 @@ proc(
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
         end
-      =:: shadow: mut: newOps
-        ( Operation list ptr.mut : ops Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
-        path ( i32 : index Curry : curry -> ) =>
-          curry .ops []
-            curry .eltType []
-              index
-            curry .pos curry .typeContext applyElementOffset curry .eltType =[]
-          curry .ops =[]
-        end newOps@ eltType@ typeContext op .pos Curry new NestedElementPath.forEach
-      newOps
+        ( Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
+        path >$ ( Operation list i32 : index Curry : curry -> Operation list ) =>
+          curry .eltType []
+            index
+          curry .pos curry .typeContext applyElementOffset curry .eltType =[]
+        end eltType@ typeContext op .pos Curry new NestedElementPath.forEach
         eltType
           $ typeContext types.isValueType if
             BuiltIn .SET_PTR

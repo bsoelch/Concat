@@ -275,8 +275,9 @@ union(
   i32 slice : LongPath
 ) =:: export: NestedElementPath
 namespace: NestedElementPath
-  proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) =>: export: forEach
-    switch
+  ## NestedElementPath as first argument to avoid ambiguitiy if first argument is empty (when proc-type implicit)
+  proc( type : auto: A type : auto: C NestedElementPath A ( A i32 C -> A ) ptr : f C : c -> A ) =>: export: forEach
+    >$ switch
       Path8 .case =:: path
         path .length iSize cast.u for
           path .path >$ [] i32 cast.u c f ()
@@ -1352,13 +1353,9 @@ namespace: sb
         "set nested element ( " sb.appendS
         op .dataType typeContext sb.appendType
         " ) :" sb.appendS
-        =:: mut: newSb
-        path ( i32 : i stringBuilder ptr.mut : sb -> ) =>
-          sb []
-            ' ' sb.appendC
-            i sb.appendI
-          sb =[]
-        end newSb@ NestedElementPath.forEach newSb
+        path >$ @{
+          >$ ' ' sb.appendC >$ sb.appendI
+        } NestedElementPath.forEach
       break
       Return case
         "Return( " sb.appendS
