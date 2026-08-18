@@ -27,6 +27,13 @@ union(
   ## ValType : Composite
   ## ( ValType ValType ) : Composite2
 ) =:: StackValue
+proc( StackValue -> i32 ) =>: stackValSlots
+  switch
+    Reference Value case 1 return
+    Val2 case 2 return
+    Val3 case 3 return
+  end
+end
 ## TODO change PreCompiler to output lower-level IR
 ## * only support primitive types and pointers, no composites (except for data-layout and c-call handling)
 ## should allow backends to focus on register-allocation
@@ -271,7 +278,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       ## TODO! should all out-args be passed before the real proc args (! backend used reveresd arg-order for c-procs)
       newArgs
         needNewArgs ! if
-          args list.appendSlice 
+          args list.appendSlice
           procType .Impl ? if
             newArgNames
               argNames list.appendSlice
@@ -393,6 +400,28 @@ proc(
     end
   end
 end
+proc( Type : valType i32 : index FilePosition ptr : pos Program ptr.mut : program -> ( i32 : start i32 : count )  ) =>: findTupleElementSlots
+  program .errors =:: errors
+  program .idContext .typeContext =:: typeContext
+  0
+    index 1 - for
+      valType >$ typeContext types.compositeGetElt pos program toValType stackValSlots +
+    end
+  valType index typeContext types.compositeGetElt pos program toValType stackValSlots
+  ( i32 : start i32 : count ) new return
+end
+proc( Operation list i32 : count FilePositon ptr : pos CompilerContext : context -> Operation list ) =>: dropSlots
+  count StackModType .DROP pos opStackMod list.append
+  count for ..drop
+    state .stack branchTree.pop .else
+      "stack underflow" sb.copyPtr pos context [] .program .errors appendError
+    end
+  end
+end
+proc( Operation list i32 : count FilePositon ptr : pos CompilerContext : context -> Operation list ) =>: rotateSlots
+  count StackModType .ROTATE pos opStackMod list.append
+  ## TODO:! apply stack effect
+end
 
 proc(
   Operation list
@@ -495,55 +524,75 @@ proc(
         end
       return
     break
-    ## TODO: vvvv --- do stack-updates --- vvvv
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType switch
-        Reference case op .dataType break
-        Value case return ## <0>
-        Val2 .case ## <0> <1>
-          op .dataType typeContext types.compositeEltCount 2 u< if
+      .else op .dataType program toValType .Reference .if
+        op .dataType
+      else ## get by value
+        op .dataType typeContext types.isTupleOrTaggedUnion if
+          switch
+            Reference case ..unreachable
+            Value case
+              op .dataType index op .pos program findTupleElementSlots .count 0 == if
+               1 op .pos context dropSlots
+              end
             return
-          else op .dataType typeContext types.compositeEltCount 2 u> _if
-            "unexpected data-type for Val2 " sb.copyPtr
-              op .dataType typeContext sb.appendType
-            op. pos errors appendError
-            return
+            Val2 case
+              op .dataType index op .pos program findTupleElementSlots
+              $ .start $ .count + 2 u> if
+                "element position outside available slots (2) expected: " sb.copyPtr
+                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
+                op. pos errors appendError
+                return
+              end
+              $ .count 0 == if
+                2 op .pos context dropSlots return
+              end
+              $ .start 0 == if
+                .count 2 == if return end
+                1 op .pos context dropSlots return
+              else $ .start 1 == _if
+                .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
+                1 op .pos context rotateSlots ## <0>
+                1 op .pos context dropSlots ## <1>
+              else ..unreachable end
+            break
+            Val3 case
+              op .dataType index op .pos program findTupleElementSlots
+              $ .start $ .count + 3 u> if
+                "element position outside available slots (3) expected: " sb.copyPtr
+                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
+                op. pos errors appendError
+                return
+              end
+              $ .count 0 == if
+                3 op .pos context dropSlots return
+              end
+              $ .start 0 == if
+                .count 3 >$ -
+                  $ 0 == if return end
+                op .pos context dropSlots return
+              else $ .start 1 == _if ## count is 1 or 2
+                2 op .pos context rotateSlots ## <1> <2> <0>
+                .count 3 >$ - op .pos context dropSlots
+              else $ .start 2 == _if
+                .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
+                -2 op .pos context rotateSlots ## <2> <0> <1>
+                2 op .pos context dropSlots ## <2>
+              else ..unreachable end
+            break
           end
-          index 0 == if
-            1 StackModType .DROP op .pos opStackMod list.append
-          else index 1 == _if
-            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
-            1 StackModType .DROP op .pos opStackMod list.append ## drop
-          else
-            "index for two-value element should be 0 or 1" ..panic
-          end
-        return
-        Val3 .case ## <0> <1> <2>
-          op .dataType typeContext types.compositeEltCount 2 u< if
-            return
-          else op .dataType typeContext types.compositeEltCount 2 == _if
-            "unimplemented: two-element Val3" ..panic
-          else op .dataType typeContext types.compositeEltCount 3 u> _if
-            "unexpected data-type for Val3 " sb.copyPtr
-              op .dataType typeContext sb.appendType
-            op. pos errors appendError
-            return
-          end
-          index 0 == if
-            2 StackModType .DROP op .pos opStackMod list.append
-          else index 1 == _if
-            2 StackModType .ROTATE op .pos opStackMod list.append ## >>$
-            2 StackModType .DROP op .pos opStackMod list.append
-          else index 2 == _if
-            -2 StackModType .ROTATE op .pos opStackMod list.append ## <<$
-            2 StackModType .DROP op .pos opStackMod list.append
-          else
-            "index for three-value element should be 0, 1 or 2" ..panic
-          end
-        return
-      end end index op .pos typeContext applyElementOffset =:: eltType
+        else op .dataType typeContext types.isRawOrComputedUnion _if
+          "unimplemented: union-element access" ..panic
+        else op .dataType typeContext types.isArray _if
+          "unimplemented: array-element access" ..panic
+        else
+          "unsupported type for element access: " sb.copyPtr
+            op .dataType typeContext sb.appendType
+          op. pos errors appendError
+        end
+      end index op .pos typeContext applyElementOffset =:: eltType
         isPtr ! and eltType typeContext types.isValueType if
           ## TODO? delayed dereferencing of value-types
           ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
@@ -554,57 +603,98 @@ proc(
     SetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType switch
-        Reference case op .dataType break
-        Value case ## <v> <0>
-          1 StackModType .DROP op .pos opStackMod list.append
-        return
-        Val2 .case ## <v> <0> <1>
-          op .dataType typeContext types.compositeEltCount 2 u< if
-            2 StackModType .DROP op .pos opStackMod list.append return
-          else op .dataType typeContext types.compositeEltCount 2 u> _if
-            "unexpected data-type for Val2 " sb.copyPtr
-              op .dataType typeContext sb.appendType
-            op. pos errors appendError
+      .else op .dataType program toValType .Reference .if
+        op .dataType
+      else ## get by value
+        op .dataType typeContext types.isTupleOrTaggedUnion if
+          ## TODO: decay source value
+          switch
+            Reference case ..unreachable
+            Value case ## <v> <0>
+              op .dataType index op .pos program findTupleElementSlots .count 0 == if
+               1 op .pos context dropSlots
+              end
             return
+            Val2 case ## <v> <0> <1>
+              op .dataType index op .pos program findTupleElementSlots
+              $ .start $ .count + 2 u> if
+                "element position outside available slots (2) expected: " sb.copyPtr
+                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
+                op. pos errors appendError
+                return
+              end
+              $ .count 0 == if
+                2 op .pos context dropSlots return
+              end
+              $ .start 0 == if
+                .count 2 == if ## <v1> <v2> <0> <1>
+                  2 op .pos context dropSlots return
+                end ## <v> <0> <1>
+                1 op .pos context rotateSlots ## <v> <1> <0>
+                1 op .pos context dropSlots ## <v> <1>
+                return
+              else $ .start 1 == _if ## <v> <0> <1>
+                .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
+                1 op .pos context dropSlots ## <v> <0>
+                1 op .pos context rotateSlots ## <0> <v>
+              else ..unreachable return end
+            break
+            Val3 case
+              op .dataType index op .pos program findTupleElementSlots
+              $ .start $ .count + 3 u> if
+                "element position outside available slots (3) expected: " sb.copyPtr
+                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
+                op. pos errors appendError
+                return
+              end
+              $ .count 0 == if
+                3 op .pos context dropSlots return
+              end
+              $ .start 0 == if
+                .count switch
+                  1 case ## <v> <0> <1> <2> -- <v> <1> <2>
+                    2 op .pos context rotateSlots ## <v> <1> <2> <0>
+                    1 op .pos context dropSlots
+                  return
+                  2 case ## <v1> <v2> <0> <1> <2> -- <v1> <v2> <2>
+                    -2 op .pos context rotateSlots ## <v1> <v2> <2> <0> <1>
+                    2 op .pos context dropSlots
+                  return
+                  3 case ## <v1> <v2> <v3> <0> <1> <2> -- <v1> <v2> <v3>
+                    3 op .pos context dropSlots return
+                  return
+                  default ..unreachable
+                end
+              else $ .start 1 == _if ## count is 1 or 2
+                .count switch
+                  1 case ## <v> <0> <1> <2> -- <0> <v> <2>
+                    -2 op .pos context rotateSlots ## <v> <2> <0> <1>
+                    1 op .pos context dropSlots ## <v> <2> <0>
+                    -2 op .pos context rotateSlots ## <0> <v> <2>
+                  return
+                  2 case ## <v1> <v2> <0> <1> <2> -- <0> <v1> <v2>
+                    2 op .pos context dropSlots ## <v1> <v2> <0>
+                    -2 op .pos context rotateSlots ## <0> <v1> <v2>
+                  return
+                  default ..unreachable
+                end
+              else $ .start 2 == _if ## <v> <0> <1> <2> -- <0> <1> <v>
+                .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
+                1 op .pos context dropSlots ## <v> <0> <1>
+                2 op .pos context rotateSlots ## <0> <1> <v>
+              else ..unreachable end
+            break
           end
-          index 0 == if
-            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
-            1 StackModType .DROP op .pos opStackMod list.append ## drop
-          else index 1 == _if
-            1 StackModType .DROP op .pos opStackMod list.append ## drop
-            1 StackModType .ROTATE op .pos opStackMod list.append ## swap
-          else
-            "index for two-value element should be 0 or 1" ..panic
-          end
-        return
-        Val3 .case ## <v> <0> <1> <2>
-          op .dataType typeContext types.compositeEltCount 2 u< if
-            3 StackModType .DROP op .pos opStackMod list.append return
-          else op .dataType typeContext types.compositeEltCount 2 == _if
-            "unimplemented: two-element Val3" ..panic
-          else op .dataType typeContext types.compositeEltCount 3 u> _if
-            "unexpected data-type for Val3 " sb.copyPtr
-              op .dataType typeContext sb.appendType
-            op. pos errors appendError
-            return
-          end
-          index 0 == if
-            2 StackModType .ROTATE op .pos opStackMod list.append ## <v> <1> <2> <0>
-            1 StackModType .DROP op .pos opStackMod list.append ## <v> <1> <2>
-          else index 1 == _if
-            3 StackModType .ROTATE op .pos opStackMod list.append ## <0> <1> <2> <v>
-            -2 StackModType .ROTATE op .pos opStackMod list.append ## <0> <v> <1> <2>
-            1 StackModType .ROTATE op .pos opStackMod list.append ## <0> <v> <2> <1>
-            1 StackModType .DROP op .pos opStackMod list.append ## <0> <v> <2>
-          else index 2 == _if
-            1 StackModType .DROP op .pos opStackMod list.append ## <v> <0> <1>
-            2 StackModType .ROTATE op .pos opStackMod list.append ## <0> <1> <v>
-          else
-            "index for three-value element should be 0, 1 or 2" ..panic
-          end
-        return
-      end end
+        else op .dataType typeContext types.isRawOrComputedUnion _if
+          "unimplemented: union-element access" ..panic
+        else op .dataType typeContext types.isArray _if
+          "unimplemented: array-element access" ..panic
+        else
+          "unsupported type for element access: " sb.copyPtr
+            op .dataType typeContext sb.appendType
+          op. pos errors appendError
+        end
+      end
         isPtr ! if ## preserve reference on stack
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
@@ -621,18 +711,11 @@ proc(
     SetNestedElement .case =:: path
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType switch
-        Reference case op .dataType break
-        Value case ## <v> <0>
-          1 StackModType .DROP op .pos opStackMod list.append
-        return
-        Val2 .case ## <v> <0> <1>
-          "unimplemented: nested set-element for Val2" ..panic
-        return
-        Val3 .case ## <v> <0> <1> <2>
-          "unimplemented: nested set-element for Val3" ..panic
-        return
-      end end =:: mut: eltType
+      .else op .dataType program toValType .Reference .if
+        op .dataType
+      else ## -> nested version for computing elementSlots
+        "unimplemented: nested set-element" ..panic
+      end =:: mut: eltType
         isPtr ! if ## preserve value on stack
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
