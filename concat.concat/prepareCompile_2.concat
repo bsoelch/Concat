@@ -18,11 +18,53 @@ enum(
   F16 F32 F64
   PTR FPTR
 ) =:: ValType
+namespace: ValType
+  proc( ValType -> i32 ) =>: size
+    switch
+      BOOL case 1 return
+      I8 case 1 return
+      I16 F16 case 2 return
+      I32 F32 case 4 return
+      I64 F64 case 8 return
+      PTR FPTR case 8 return
+    end
+  end
+  proc( ValType -> bool ) =>: isInt
+    switch
+      I8 I16 I32 I64 case true return
+      default false return
+    end
+  end
+  proc( ValType -> bool ) =>: isFloat
+    switch
+      F16 F32 F64 case true return
+      default false return
+    end
+  end
+  proc( ValType -> bool ) =>: isPointer
+    switch
+      PTR FPTR case true return
+      default false return
+    end
+  end
+  proc( ValType ValType -> ValType optional ) =>: mergeUnionElt
+    $1 $1 == if ..drop optional.wrap return end ## values are the same
+    ## TODO? support merge of different sized floats to V<n>F
+    >$ ValType.size >$ ValType.size i32.max switch
+      1 case ValType .I8 optional.wrap return
+      2 case ValType .I16 optional.wrap return
+      4 case ValType .I32 optional.wrap return
+      8 case ValType .I64 optional.wrap return
+      default { } return
+    end
+  end
+end
 union(
-  _ : Reference
+  _ : Empty
   ValType : Value
   ( ValType ValType ) : Val2
   ( ValType ValType ValType ) : Val3
+  _ : Reference
   ## TODO: seperate StackValues for compressed composites (needed for C ABI)
   ## ValType : Composite
   ## ( ValType ValType ) : Composite2
@@ -34,9 +76,27 @@ union(
 ) =:: StackValue
 proc( StackValue -> i32 ) =>: stackValSlots
   switch
+    Empty case 0 return
     Reference Value case 1 return
     Val2 case 2 return
     Val3 case 3 return
+  end
+end
+proc( StackValue ValType 4 ptr.mut -> ValType slice ) =>: stackValSlotTypes
+  >$ switch
+    Reference Empty case ..drop ValType slice.empty return
+    Value .case $1 0 =[] 1 slice.create return
+    Val2 .case ... ## <s> <0> <1>
+      $2 1 =[]
+      $1 0 =[]
+      2 slice.create
+    return
+    Val3 .case ... ## <s> <0> <1> <2>
+      $3 2 =[]
+      $2 1 =[]
+      $1 0 =[]
+      3 slice.create
+    return
   end
 end
 ## TODO change PreCompiler to output lower-level IR
@@ -351,9 +411,36 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   program .nameBuffer=
 end
 
+proc( StackValue StackValue -> StackValue ) =>: mergeUnionValTypes
+  ## if one of values is reference, return that value
+  ## if one value is empty return the other value
+  $ .Reference ? or $1 .Empty ? if >$ ..drop return end
+  $1 .Reference ? or $ .Empty ? if ..drop return end
+  ## get slots
+  ValType 4 array new =:: mut: slotsA
+  ValType 4 array new =:: mut: slotsB
+  >$ slotsA@ stackValSlotTypes .length
+  >$ slotsB@ stackValSlotTypes .length
+  iSize.max $ for
+    slotsA $1 [] slotsB $2 [] ValType.mergeUnionElt .else
+      ..drop.2 StackValue .Reference return
+    end slotsA@ >>$ =[]
+  end switch
+    0 case StackValue .Empty return
+    1 case slotsA 0 [] StackValue .Value return
+    2 case
+      slotsA 0 [] slotsA 1 [] ( ValType ValType ) new
+    StackValue .Val2 return
+    3 case
+      slotsA 0 [] slotsA 1 [] slotsA 2 [] ( ValType ValType ValType ) new
+    StackValue .Val3 return
+    default StackValue .Reference return
+  end
+end
 proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue ) =>: toValType
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
+  ValType 4 array : mut: eltBuffer
   typeContext types.unwrapNamed .PrimitiveType .if switch
       BOOL case ValType .BOOL break
       I8  case ValType .I8 break
@@ -369,8 +456,56 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
     ValType .FPTR StackValue .Value return
   else $ typeContext types.isPointer _if ..drop
     ValType .PTR StackValue .Value return
+  else $ typeContext types.isTupleLike _if
+    eltBuffer@ list.wrapBuffer
+      >$ typeContext types.compositeElts for
+        pos program toValType switch
+          Empty case break
+          Reference case ..drop StackValue .Reference return
+          Value .case
+            $1 .length eltBuffer ..length 1 - u>= if
+              ..drop.2 StackValue .Reference return
+            end
+            list.append
+          break
+          Val2 .case
+            $1 .length eltBuffer ..length 2 - u>= if
+              ..drop.2 StackValue .Reference return
+            end ...
+            <<$ list.append
+            >$ list.append
+          break
+          Val3 .case
+            $1 .length eltBuffer ..length 3 - u>= if
+              ..drop.2 StackValue .Reference return
+            end ...
+            >>>$ >>>$ list.append
+            >>$ list.append
+            >$ list.append
+          break
+        end
+      end
+    $ .length switch
+      0 case ..drop StackValue .Empty return
+      1 case 0 [] StackValue .Value return
+      2 case
+        $ 0 [] >$ 1 [] ( ValType ValType ) new StackValue .Val2
+      return
+      3 case
+        $ 0 [] $1 1 [] >>$ 2 [] ( ValType ValType ValType ) new StackValue .Val3
+      return
+      default ..drop
+        StackValue .Reference return
+      break
+    end
+  else $ typeContext types.isUnionLike _if
+    StackValue .Empty
+      >$ typeContext types.compositeElts for
+        pos program toValType mergeUnionValTypes
+      end
+    return
   end
-  ## TODO support composite values
+  ## TODO support array values
   "cannot determine ValType of " sb.copyPtr
     >$ typeContext sb.appendType
   pos errors appendError
@@ -388,7 +523,7 @@ proc(
     "stack-underflow" sb.copyPtr pos errors appendError return
   end .Reference ? if
     expectedType pos program toValType switch
-      Reference case
+      Reference Empty case
         "cannot dereference " sb.copyPtr
           expectedType typeContext sb.appendType
         pos errors appendError return
@@ -410,8 +545,10 @@ proc( Type : valType i32 : index FilePosition ptr : pos ProgramContext ptr.mut :
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
   0
-    index 1 - for
-      valType >$ typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots +
+    index 0 != if
+      index 1 - for
+        valType >$ typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots +
+      end
     end
   valType index typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots
   ElementSlotInfo new return
@@ -433,21 +570,20 @@ proc( Operation list i32 : count FilePosition ptr : pos ConverterContext ptr.mut
   ## TODO:! apply stack effect
 end
 proc( Operation list ElementSlotInfo StackValue FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: setTupleSlots
-  context [] .program .errors =:: errors
+  context [] .program =:: program
   switch
     Reference case ..unreachable
+    Empty case
+      0 pos program checkSlotCount ..drop
+    return
     Value case ## <v> <0>
+      $ 1 pos program checkSlotCount if ..drop return end
       .count 0 == if
        1 pos context dropSlots
       end
     return
     Val2 case ## <v> <0> <1>
-      $ .start $1 .count + 2 u> if
-        "element position outside available slots (2) expected: " sb.copyPtr
-          $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
-        pos errors appendError
-        return
-      end
+      $ 2 pos program checkSlotCount if ..drop return end
       $ .count 0 == if ..drop
         2 pos context dropSlots return
       end
@@ -465,12 +601,7 @@ proc( Operation list ElementSlotInfo StackValue FilePosition ptr : pos Converter
       else ..unreachable return end
     break
     Val3 case
-      $ .start $1 .count + 3 u> if
-        "element position outside available slots (3) expected: " sb.copyPtr
-          $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
-        pos errors appendError
-        return
-      end
+      $ 3 pos program checkSlotCount if ..drop return end
       $ .count 0 == if ..drop
         3 pos context dropSlots return
       end
@@ -509,6 +640,18 @@ proc( Operation list ElementSlotInfo StackValue FilePosition ptr : pos Converter
       else ..unreachable end
     break
   end
+end
+proc( ElementSlotInfo i32 FilePosition ptr : pos ProgramContext ptr.mut : program -> bool ) =>: checkSlotCount
+  ## <slotsInfo> <slotCount>
+  $1 .start $2 .count + $1 u> if
+    "element position outside available slots (" sb.copyPtr
+      >$ sb.appendI
+      ") expected: ":s sb.appendStr
+      $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
+    pos program .errors appendError
+    true return
+  else ..drop.2 end
+  false return
 end
 
 proc(
@@ -554,11 +697,7 @@ proc(
           0
             >$ .n for ..drop
               context .stack branchTree.pop .if
-                switch
-                  Reference Value case 1 + break
-                  Val2 case 2 + break
-                  Val3 case 3 + break
-                end
+                [] stackValSlots +
               end
             end
           StackModType .DROP op .pos opStackMod list.append
@@ -593,6 +732,7 @@ proc(
           end
         end
       switch
+        Empty case return
         Value .case ..drop
           op list.append ## element access on value-type
         return
@@ -618,22 +758,21 @@ proc(
       .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## get by value
-        op .dataType typeContext types.isTupleOrTaggedUnion if
+        op .dataType typeContext types.isTupleLike if
           op .dataType index op .pos program findTupleElementSlots
           >$ switch
             Reference case ..unreachable
+            Empty case
+              0 op .pos program checkSlotCount ..drop
+            return
             Value case
+              $ 1 op .pos program checkSlotCount if ..drop return end
               .count 0 == if
                1 op .pos context dropSlots
               end
             return
             Val2 case
-              $ .start $1 .count + 2 u> if
-                "element position outside available slots (2) expected: " sb.copyPtr
-                  $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
-                op .pos errors appendError
-                return
-              end
+              $ 2 op .pos program checkSlotCount if ..drop return end
               $ .count 0 == if ..drop
                 2 op .pos context dropSlots return
               end
@@ -647,12 +786,7 @@ proc(
               else ..unreachable end
             return
             Val3 case
-              $ .start $1 .count + 3 u> if
-                "element position outside available slots (3) expected: " sb.copyPtr
-                  $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
-                op .pos errors appendError
-                return
-              end
+              $ 3 op .pos program checkSlotCount if ..drop return end
               $ .count 0 == if ..drop
                 3 op .pos context dropSlots return
               end
@@ -670,7 +804,7 @@ proc(
               else ..unreachable end
             return
           end
-        else op .dataType typeContext types.isRawOrComputedUnion _if
+        else op .dataType typeContext types.isUnionLike _if
           "unimplemented: union-element access" ..panic
         else op .dataType typeContext types.isArray _if
           "unimplemented: array-element access" ..panic
@@ -694,12 +828,12 @@ proc(
       .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## set by value
-        op .dataType typeContext types.isTupleOrTaggedUnion if
+        op .dataType typeContext types.isTupleLike if
           ## TODO: decay source value
           op .dataType index op .pos program findTupleElementSlots
           >$ op .pos context setTupleSlots
           return
-        else op .dataType typeContext types.isRawOrComputedUnion _if
+        else op .dataType typeContext types.isUnionLike _if
           "unimplemented: union-element access" ..panic
         else op .dataType typeContext types.isArray _if
           "unimplemented: array-element access" ..panic
@@ -731,12 +865,12 @@ proc(
       .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## set by value
-        op .dataType typeContext types.isTupleOrTaggedUnion if
+        op .dataType typeContext types.isTupleLike if
           ## TODO: decay source value
           op .dataType path op .pos program findNestedTupleElementSlots
           >$ op .pos context setTupleSlots
           return
-        else op .dataType typeContext types.isRawOrComputedUnion _if
+        else op .dataType typeContext types.isUnionLike _if
           "unimplemented: nested set union-element" ..panic
         else op .dataType typeContext types.isArray _if
           "unimplemented: nested set array-element" ..panic

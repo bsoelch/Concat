@@ -601,9 +601,6 @@ namespace: types
         default 127 return
       end
     end
-    proc( SimpleTypeInfo -> bool ) =>: export: isSimple
-      i8 cast MIXED i8 cast <
-    end
     proc( SimpleTypeInfo SimpleTypeInfo -> SimpleTypeInfo ) : alias: mix i8.or
   end
   proc( Type TypeContext ptr.mut : context -> SimpleTypeInfo ) =>: simpleType
@@ -650,9 +647,6 @@ namespace: types
       RefinementType .case .baseType [] context simpleType return
       NamedType GeneratedType case ..unreachable
     end
-  end
-  proc( Type TypeContext ptr.mut -> bool ) =>: export: isSimpleType
-    simpleType SimpleTypeInfo.isSimple
   end
   proc( Type TypeContext ptr.mut : context -> bool ) =>: export: isValueType
     context unwrapNamed switch
@@ -1367,11 +1361,11 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedOrComputedUnion
     unwrapNamed isTaggedOrComputedUnion0
   end
-  proc( Type -> bool ) =>: export: isTupleOrTaggedUnion0
+  proc( Type -> bool ) =>: export: isTupleLike0
     $ .Struct ? >$ .TaggedUnion ? | return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isTupleOrTaggedUnion
-    unwrapNamed isTupleOrTaggedUnion0
+  proc( Type TypeContext ptr -> bool ) =>: export: isTupleLike
+    unwrapNamed isTupleLike0
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isComputedUnion
     unwrapNamed .ComputedUnion ?
@@ -1393,11 +1387,11 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isRawUnion
     unwrapNamed isRawUnion0
   end
-  proc( Type -> bool ) =>: export: isRawOrComputedUnion0
+  proc( Type -> bool ) =>: export: isUnionLike0
     $ .RawUnion ? >$ .ComputedUnion ? | return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isRawOrComputedUnion
-    unwrapNamed isRawOrComputedUnion0
+  proc( Type TypeContext ptr -> bool ) =>: export: isUnionLike
+    unwrapNamed isUnionLike0
   end
   proc( Type -> bool ) =>: export: isUnionElement
     .UnionElement ? return
