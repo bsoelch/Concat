@@ -1367,6 +1367,12 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedOrComputedUnion
     unwrapNamed isTaggedOrComputedUnion0
   end
+  proc( Type -> bool ) =>: export: isTupleOrTaggedUnion0
+    $ .Struct ? >$ .TaggedUnion ? | return
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isTupleOrTaggedUnion
+    unwrapNamed isTupleOrTaggedUnion0
+  end
   proc( Type TypeContext ptr -> bool ) =>: export: isComputedUnion
     unwrapNamed .ComputedUnion ?
   end
@@ -1386,6 +1392,12 @@ namespace: types
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isRawUnion
     unwrapNamed isRawUnion0
+  end
+  proc( Type -> bool ) =>: export: isRawOrComputedUnion0
+    $ .RawUnion ? >$ .ComputedUnion ? | return
+  end
+  proc( Type TypeContext ptr -> bool ) =>: export: isRawOrComputedUnion
+    unwrapNamed isRawOrComputedUnion0
   end
   proc( Type -> bool ) =>: export: isUnionElement
     .UnionElement ? return

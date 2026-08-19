@@ -9,6 +9,7 @@
 "typeCheck" import
 "usageAnalysis" import
 "prepareCompile" import
+"prepareCompile_2" import
 "generator_qbe" import
 "generator_asm" import
 
@@ -300,19 +301,37 @@ proc( -> ) =>: main ## TODO check return value of fopen
     file.close
     parsedOps sb.free ..drop
   end
+  _VAL_TYPES_ if
+    prog@ prepareCompile2
+    1024 sb.create
+      prog@ sb.appendProgram
+      tmpPath sb.free
+        baseName sb.appendStr
+        ".tokens.preCompile":s sb.appendStr
+      tmpPath=
+      tmpPath sb.asStr file.OpenMode .WRITE file.open
+        $1 sb.asStr file.write
+      file.close
+    sb.free ..drop
+    prog@ .errors checkErrors
+    ## early exit (currently no back-end support)
+    outPath sb.free ..drop
+    tmpPath sb.free ..drop
+    targetPath sb.free ..drop
+    0 sys.exit
+  end
   prog@ prepareCompile
   dumpPhases DumpPhases.PRE_COMPILER & ? if
     1024 sb.create
       prog@ sb.appendProgram
-    =:: parsedOps
-    tmpPath sb.free
-      baseName sb.appendStr
-      ".tokens.preCompile":s sb.appendStr
-    tmpPath=
-    tmpPath sb.asStr file.OpenMode .WRITE file.open
-      parsedOps sb.asStr file.write
-    file.close
-    parsedOps sb.free ..drop
+      tmpPath sb.free
+        baseName sb.appendStr
+        ".tokens.preCompile":s sb.appendStr
+      tmpPath=
+      tmpPath sb.asStr file.OpenMode .WRITE file.open
+        $1 sb.asStr file.write
+      file.close
+    sb.free ..drop
   end
   prog@ .errors checkErrors
   outPath sb.asStr file.OpenMode .WRITE file.open

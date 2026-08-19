@@ -406,33 +406,34 @@ proc(
   end
 end
 struct( i32 : start i32 : count ) =:: ElementSlotInfo
-proc( Type : valType i32 : index FilePosition ptr : pos Program ptr.mut : program -> ElementSlotInfo  ) =>: findTupleElementSlots
+proc( Type : valType i32 : index FilePosition ptr : pos ProgramContext ptr.mut : program -> ElementSlotInfo  ) =>: findTupleElementSlots
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
   0
     index 1 - for
-      valType >$ typeContext types.compositeGetElt pos program toValType stackValSlots +
+      valType >$ typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots +
     end
-  valType index typeContext types.compositeGetElt pos program toValType stackValSlots
+  valType index typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots
   ElementSlotInfo new return
 end
-proc( Type : valType NestedElementPath : path FilePosition ptr : pos Program ptr.mut : program -> ElementSlotInfo  ) =>: findNestedTupleElementSlots
-  ## proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) =>: export: forEach
+proc( Type : valType NestedElementPath : path FilePosition ptr : pos ProgramContext ptr.mut : program -> ElementSlotInfo  ) =>: findNestedTupleElementSlots
+  ## proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) : forEach
   "nested element slots" ..panic
 end
-proc( Operation list i32 : count FilePositon ptr : pos CompilerContext : context -> Operation list ) =>: dropSlots
+proc( Operation list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: dropSlots
   count StackModType .DROP pos opStackMod list.append
   count for ..drop
-    state .stack branchTree.pop .else
+    context .stack branchTree.pop ? ! if
       "stack underflow" sb.copyPtr pos context [] .program .errors appendError
     end
   end
 end
-proc( Operation list i32 : count FilePositon ptr : pos CompilerContext : context -> Operation list ) =>: rotateSlots
+proc( Operation list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: rotateSlots
   count StackModType .ROTATE pos opStackMod list.append
   ## TODO:! apply stack effect
 end
-proc( Operation list ElementSlotInfo StackValue FilePositon ptr : pos CompilerContext : context -> Operation list ) =>: setTupleSlots
+proc( Operation list ElementSlotInfo StackValue FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: setTupleSlots
+  context [] .program .errors =:: errors
   switch
     Reference case ..unreachable
     Value case ## <v> <0>
@@ -441,13 +442,13 @@ proc( Operation list ElementSlotInfo StackValue FilePositon ptr : pos CompilerCo
       end
     return
     Val2 case ## <v> <0> <1>
-      $ .start $ .count + 2 u> if
+      $ .start $1 .count + 2 u> if
         "element position outside available slots (2) expected: " sb.copyPtr
-          $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
-        op. pos errors appendError
+          $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
+        pos errors appendError
         return
       end
-      $ .count 0 == if
+      $ .count 0 == if ..drop
         2 pos context dropSlots return
       end
       $ .start 0 == if
@@ -464,13 +465,13 @@ proc( Operation list ElementSlotInfo StackValue FilePositon ptr : pos CompilerCo
       else ..unreachable return end
     break
     Val3 case
-      $ .start $ .count + 3 u> if
+      $ .start $1 .count + 3 u> if
         "element position outside available slots (3) expected: " sb.copyPtr
-          $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
-        op. pos errors appendError
+          $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
+        pos errors appendError
         return
       end
-      $ .count 0 == if
+      $ .count 0 == if ..drop
         3 pos context dropSlots return
       end
       $ .start 0 == if
@@ -560,7 +561,7 @@ proc(
                 end
               end
             end
-          >$ StackModType .DROP op .pos opStackMod list.append
+          StackModType .DROP op .pos opStackMod list.append
         return
         COPY case
           "unimplemented: copy" ..panic
@@ -582,17 +583,17 @@ proc(
       return
     break
     GetId SetId .case =:: idInfo
-      op .dataType program toValType
+      op .dataType op .pos program toValType
         op .val .GetId ? if
-          context .stack $1 branchTree .push
+          context .stack $1 branchTree.push
         else
           op .dataType op .pos context decayReference
-          context .stack $1 branchTree .pop .if
+          context .stack branchTree.pop .if
             ..drop ## TODO? verify that source and target value match
           end
         end
       switch
-        Value .case
+        Value .case ..drop
           op list.append ## element access on value-type
         return
         Val2 Val3 case "unimplemented: get/set multi-value" ..panic
@@ -614,7 +615,7 @@ proc(
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType .Reference .if
+      .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## get by value
         op .dataType typeContext types.isTupleOrTaggedUnion if
@@ -627,13 +628,13 @@ proc(
               end
             return
             Val2 case
-              $ .start $ .count + 2 u> if
+              $ .start $1 .count + 2 u> if
                 "element position outside available slots (2) expected: " sb.copyPtr
-                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
-                op. pos errors appendError
+                  $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
+                op .pos errors appendError
                 return
               end
-              $ .count 0 == if
+              $ .count 0 == if ..drop
                 2 op .pos context dropSlots return
               end
               $ .start 0 == if
@@ -644,39 +645,40 @@ proc(
                 1 op .pos context rotateSlots ## <0>
                 1 op .pos context dropSlots ## <1>
               else ..unreachable end
-            break
+            return
             Val3 case
-              $ .start $ .count + 3 u> if
+              $ .start $1 .count + 3 u> if
                 "element position outside available slots (3) expected: " sb.copyPtr
-                  $1 .start sb.appendI '(' sb.appendC >$ sb.appendI ")" sb.appendC
-                op. pos errors appendError
+                  $1 .start sb.appendI '(' sb.appendC >$ .count sb.appendI ')' sb.appendC
+                op .pos errors appendError
                 return
               end
-              $ .count 0 == if
+              $ .count 0 == if ..drop
                 3 op .pos context dropSlots return
               end
               $ .start 0 == if
                 .count 3 >$ -
-                  $ 0 == if return end
+                  $ 0 == if ..drop return end
                 op .pos context dropSlots return
               else $ .start 1 == _if ## count is 1 or 2
-                2 op .pos context rotateSlots ## <1> <2> <0>
-                .count 3 >$ - op .pos context dropSlots
+                >$ 2 op .pos context rotateSlots ## <1> <2> <0>
+                >$ .count 3 >$ - op .pos context dropSlots
               else $ .start 2 == _if
                 .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
                 -2 op .pos context rotateSlots ## <2> <0> <1>
                 2 op .pos context dropSlots ## <2>
               else ..unreachable end
-            break
+            return
           end
         else op .dataType typeContext types.isRawOrComputedUnion _if
           "unimplemented: union-element access" ..panic
         else op .dataType typeContext types.isArray _if
           "unimplemented: array-element access" ..panic
-        else
+        else ..drop
           "unsupported type for element access: " sb.copyPtr
             op .dataType typeContext sb.appendType
-          op. pos errors appendError
+          op .pos errors appendError
+          return
         end
       end index op .pos typeContext applyElementOffset =:: eltType
         isPtr ! and eltType typeContext types.isValueType if
@@ -689,13 +691,14 @@ proc(
     SetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType .Reference .if
+      .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## set by value
         op .dataType typeContext types.isTupleOrTaggedUnion if
           ## TODO: decay source value
           op .dataType index op .pos program findTupleElementSlots
           >$ op .pos context setTupleSlots
+          return
         else op .dataType typeContext types.isRawOrComputedUnion _if
           "unimplemented: union-element access" ..panic
         else op .dataType typeContext types.isArray _if
@@ -703,12 +706,15 @@ proc(
         else
           "unsupported type for element access: " sb.copyPtr
             op .dataType typeContext sb.appendType
-          op. pos errors appendError
+          op .pos errors appendError
+          ..drop return
         end
       end
         isPtr ! if ## preserve reference on stack
-          1 StackModType .ROTATE op .pos opStackMod list.append
-          1 StackModType .COPY op .pos opStackMod list.append
+          >$
+            1 StackModType .ROTATE op .pos opStackMod list.append
+            1 StackModType .COPY op .pos opStackMod list.append
+          <$
         end
       index op .pos typeContext applyElementOffset
           $ typeContext types.isValueType if
@@ -722,13 +728,14 @@ proc(
     SetNestedElement .case =:: path
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType program toValType .Reference .if
+      .else op .dataType op .pos program toValType .Reference ._if ..drop
         op .dataType
       else ## set by value
         op .dataType typeContext types.isTupleOrTaggedUnion if
           ## TODO: decay source value
           op .dataType path op .pos program findNestedTupleElementSlots
           >$ op .pos context setTupleSlots
+          return
         else op .dataType typeContext types.isRawOrComputedUnion _if
           "unimplemented: nested set union-element" ..panic
         else op .dataType typeContext types.isArray _if
@@ -736,24 +743,28 @@ proc(
         else
           "unsupported type for element access: " sb.copyPtr
             op .dataType typeContext sb.appendType
-          op. pos errors appendError
+          op .pos errors appendError
+          ..drop return
         end
-      end =:: mut: eltType
+      end
         isPtr ! if ## preserve value on stack
-          1 StackModType .ROTATE op .pos opStackMod list.append
-          1 StackModType .COPY op .pos opStackMod list.append
+          >$
+            1 StackModType .ROTATE op .pos opStackMod list.append
+            1 StackModType .COPY op .pos opStackMod list.append
+          <$
         end
-      =:: mut: newOps
-        ( Operation list ptr.mut : ops Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
-        path ( i32 : index Curry : curry -> ) =>
-          curry .ops []
-            curry .eltType []
-              index
-            curry .pos curry .typeContext applyElementOffset curry .eltType =[]
-          curry .ops =[]
-        end newOps@ eltType@ typeContext op .pos Curry new NestedElementPath.forEach
-      newOps
-        eltType
+        ( Operation list : ops Type : eltType ) new
+          ( TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
+          path >$ @{ ## <data> <index> <curry> | <ops> <eltType>
+            $2 .ops
+              $3 .eltType
+                >>>$ ## <data> <curry> <ops> <eltType> <index> | <pos>
+                $3 .pos >>>>$ .typeContext applyElementOffset
+              >>$ .eltType= ## <data> <ops> <eltType>
+            .ops=
+          } typeContext op .pos Curry new NestedElementPath.forEach
+        $ .ops
+        >$ .eltType
           $ typeContext types.isValueType if
             BuiltIn .SET_PTR
           else
@@ -890,7 +901,7 @@ proc(
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
-      newOps =:: mut: newOps
+      =:: mut: newOps
       calledType newOps@
         op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
       op .pos context updateProcType =:: outArgNames =:: newProcType
@@ -1030,7 +1041,7 @@ proc(
 end
 
 ## TODO better name for file&procedure, find good description of compilation-step
-proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile
+proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile2
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
