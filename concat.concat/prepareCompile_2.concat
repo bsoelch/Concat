@@ -19,6 +19,19 @@ enum(
   PTR FPTR
 ) =:: ValType
 namespace: ValType
+  proc( ValType -> Type ) =>: asType
+    switch
+      BOOL case types.primitive.BOOL return
+      I8 case types.primitive.I8 return
+      I16 case types.primitive.I16 return
+      I32 case types.primitive.I32 return
+      I64 case types.primitive.I64 return
+      F16 case types.primitive.F16 return
+      F32 case types.primitive.F32 return
+      F64 case types.primitive.F64 return
+      PTR FPTR case types.I_SIZE return
+    end
+  end
   proc( ValType -> i32 ) =>: size
     switch
       BOOL case 1 return
@@ -519,9 +532,9 @@ proc(
   context [] .program =:: program
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
-  context .stack branchTree.pop .else
+  context .stack branchTree.peek .else
     "stack-underflow" sb.copyPtr pos errors appendError return
-  end .Reference ? if
+  end [] .Reference ? if
     expectedType pos program toValType switch
       Reference Empty case
         "cannot dereference " sb.copyPtr
@@ -665,8 +678,42 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
+  ## TODO: bring switch-branches in reasonable order
   op .val switch
     NOP case return ## ignore no-ops
+    Constant .case =:: constVal
+      op .dataType op .pos program toValType
+        context .stack $1 branchTree.push
+      switch
+        Reference case
+          constVal op .dataType op .pos program opConstReference list.append
+        return
+        Empty case return
+        Value case
+          op list.append
+        return
+        Val2 .case
+          constVal .Array .if
+            $ .length 2 != if
+              "unsupported constant for Val2 expected Array length 2 got: " sb.copyPtr
+                constVal typeContext sb.appendConstant
+              op .pos errors appendError
+              ..drop.2 return
+            end
+            >>$
+              $1 0 [] $3 .0 ValType.asType op .pos opConst list.append
+              >$ 1 [] >>$ .1 ValType.asType op .pos opConst list.append
+            return
+          else
+            "unsupported constant for Val2 expected Array got: " sb.copyPtr
+              constVal typeContext sb.appendConstant
+            op .pos errors appendError
+            ..drop.2 return
+          end
+        break
+        Val3 .case "unimplemented: val3 constants" ..panic break
+      end
+    break
     EndProc PanicWithMessage case ## no stack change
       op list.append return
     break
@@ -946,11 +993,6 @@ proc(
         VariableInfo new list.append
       context .variables=
       op list.append return ## nothing to change
-    Constant .case =:: constVal
-      op .dataType typeContext types.isValueType if
-        op list.append return
-      end
-      constVal op .dataType op .pos program opConstReference list.append return
     Copy case
       op .dataType =:: baseType
       _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
