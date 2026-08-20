@@ -72,6 +72,38 @@ namespace: ValType
     end
   end
 end
+namespace: LIROp
+  ( type : T -> type ) =>: typed
+    ( T : val ValType : valType )
+  end
+  union(
+    _ : Nop
+    bool : ConstBool
+    i64 typed : ConstInt
+    f64 typed : ConstFloat
+    NameId : ConstPtr
+    ProcId : ConstProcPtr
+    ## TODO const-ref
+    IdentifierInfo typed : GetId
+    IdentifierInfo typed : GetId2
+    IdentifierInfo typed : GetId3
+    IdentifierInfo typed : SetId
+    IdentifierInfo typed : SetId2
+    IdentifierInfo typed : SetId3
+    IdentifierInfo : AtId
+    BuiltIn typed : shadow: BuiltIn
+    i32 : Copy
+    i32 : Drop
+    i32 : Rotate
+    i32 : Rotate2
+    i32 : Rotate3
+  ) =:: Data
+end
+struct(
+  LIROp.Data : data
+  FilePosition ptr : pos
+) =:: LIROp
+
 union(
   _ : Empty
   ValType : Value
