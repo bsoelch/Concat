@@ -88,6 +88,7 @@ struct(
   JumpDistance slice : caseJumpDistances
   JumpDistance : defaultJumpDistance
   Type : switchType
+  bool : isDefaultBranch
 ) =:: export: SwitchData
 SwitchData ptr.mut =:: export: SwitchId
 namespace: SwitchId

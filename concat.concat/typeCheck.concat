@@ -931,6 +931,8 @@ proc(
       state [] .program .idContext id.closeScope ! "closing case-scope worked" assert
     end
     true switchBlock .inLabel=
+    switchBlock [] .switchId SwitchId.getSwitchData =:: switchData
+    false switchData .isDefaultBranch=
   end
 end
 ## terminate current switch branch
@@ -2302,6 +2304,13 @@ end
 
 proc(
   SwitchId : switchId
+-> ) =>: wildCardSwitchLabel
+  true
+    switchId SwitchId.getSwitchData
+  .isDefaultBranch=
+end
+proc(
+  SwitchId : switchId
   Type : switchType
   ConstValue : label0
   iSize : caseCount
@@ -2471,7 +2480,9 @@ proc(
         switchBlock .caseLabels [] .length
         op [] .pos
       state newSwitchLabel
-    else ..drop
+    else .WildCard ? _if
+      switchId wildCardSwitchLabel
+    else
       "unsupported operation in switch label:\n " sb.copyPtr
         op [] program sb.appendPreOp
       op [] .pos errors appendError
@@ -2480,7 +2491,10 @@ proc(
     true return
   end
   ## enum-switch -> try read label
-  op [] .val .GetName .else ..drop
+  op [] .val .GetName .else .WildCard ? _if
+    switchId wildCardSwitchLabel
+    true return
+  else
     "unsupported operation for switch label of type " sb.copyPtr
       switchType typeContext sb.appendType
       " : " sb.appendS
@@ -4514,6 +4528,7 @@ proc(
                 JumpDistance slice.empty
                 0:JumpDistance
                 labelType
+                false
               SwitchData new mixedArena.copyValue SwitchId cast =:: switchId
             program .programMemory=
             false 1 op .pos state clearReferences
@@ -4569,7 +4584,7 @@ proc(
             switchData [] .switchLabels list.peek =:: prev?
             switchBlock [] .switchType =:: switchType
             switchBlock .caseLabels [] .length =:: currentCaseId
-            blockType .DEFAULT or blockType .DOT_DEFAULT if
+            blockType .DEFAULT or blockType .DOT_DEFAULT or switchData [] .isDefaultBranch if
               prev? .else
                 "unexpected " sb.copyPtr
                   BlockType .DEFAULT sb.appendBlockType
@@ -4599,7 +4614,7 @@ proc(
             end LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
             switchBlock [] .switchBaseType =:: switchBaseType
-            blockType .DOT_CASE if
+            blockType .DOT_CASE and switchData [] .isDefaultBranch ! if
               switchType typeContext types.isUnion if
                 prev? .and [] .value .Int .else
                   continue.opLoop
@@ -4651,7 +4666,8 @@ proc(
                   switchType typeContext sb.appendType
                 op .pos errors appendError
               end
-            else blockType .DOT_DEFAULT _if
+            else blockType .DOT_DEFAULT or
+                switchData [] .isDefaultBranch and blockType .DOT_CASE _if
               ## pushValue
                 switchBaseType
                 ConstValue .None
