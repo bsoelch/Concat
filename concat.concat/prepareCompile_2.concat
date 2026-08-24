@@ -19,18 +19,8 @@ enum(
   PTR FPTR
 ) =:: ValType
 namespace: ValType
-  proc( ValType -> Type ) =>: asType
-    switch
-      BOOL case types.primitive.BOOL return
-      I8 case types.primitive.I8 return
-      I16 case types.primitive.I16 return
-      I32 case types.primitive.I32 return
-      I64 case types.primitive.I64 return
-      F16 case types.primitive.F16 return
-      F32 case types.primitive.F32 return
-      F64 case types.primitive.F64 return
-      PTR FPTR case types.I_SIZE return
-    end
+  proc( -> ValType ) =>: I_SIZE
+    ValType .I64
   end
   proc( ValType -> i32 ) =>: size
     switch
@@ -81,7 +71,6 @@ namespace: LIROp
     bool : ConstBool
     i64 typed : ConstInt
     f64 typed : ConstFloat
-    NameId : ConstPtr
     ProcId : ConstProcPtr
     ## TODO const-ref
     IdentifierInfo typed : GetId
@@ -92,6 +81,7 @@ namespace: LIROp
     IdentifierInfo typed : SetId3
     IdentifierInfo : AtId
     BuiltIn typed : shadow: BuiltIn
+    _ : EndProc
     i32 : Copy
     i32 : Drop
     i32 : Rotate
@@ -274,27 +264,58 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
 end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
 
-proc( Operation list
+proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirDrop
+  >$ LIROp.Data .Drop >$ LIROp new 
+end
+proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirCopy
+  >$ LIROp.Data .Copy >$ LIROp new 
+end
+proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate
+  >$ LIROp.Data .Rotate >$ LIROp new 
+end
+proc( ConstValue #+constVal+# Type #+dataType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConstRef
+  "unimplemented: const-references" ..panic
+end
+proc( i64 #+constVal+# ValType #+intType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirIntConst
+  <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new 
+end
+proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConst
+  "unimplemented: const-references" ..panic
+end
+proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcPtr
+  <$ LIROp.Data .ConstProcPtr >$ LIROp new
+end
+proc( FilePosition ptr #+pos+# -> LIROp ) =>: lirEndProc
+  LIROp.Data .EndProc >$ LIROp new
+end
+proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: lirPanic
+  "unimplemented: lir-panic" ..panic
+end
+proc( BuiltIn #+builtIn+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirBuiltIn
+  <<$ BuiltIn LIROp.typed new LIROp.Data .BuiltIn >$ LIROp new 
+end
+
+proc( LIROp list
   i64 : offset
   FilePosition ptr : pos
--> Operation list ) =>: offsetPointer
+-> LIROp list ) =>: offsetPointer
   offset 0 == if return end ## no offset -> no change
   ## merge chained (constant) pointer offset
-  $ list.peek .and .val .BuiltIn .and .OFFSET_PTR and
-      $ $ .length 2 - list.at .and .val .Constant .and .Int .if [] =:: prev_offset
+  $ list.peek .and .data .BuiltIn .and .val [] .OFFSET_PTR and
+      $ $ .length 2 - list.at .and .data .ConstInt .if .val [] =:: prev_offset
     $ .length 2 - list.setLength ## discard previous operations
-    offset prev_offset + ConstValue .Int types.I_SIZE pos opConst list.append
+    offset prev_offset +
   else
-    offset ConstValue .Int types.I_SIZE pos opConst list.append
-  end
-  Type .Empty BuiltIn .OFFSET_PTR pos opBuiltIn list.append
+    offset
+  end ValType.I_SIZE pos lirIntConst list.append
+  BuiltIn .OFFSET_PTR ValType.I_SIZE pos lirBuiltIn list.append
 end
-proc( Operation list
+proc( LIROp list
   Type : refBase
   i32 : index
   FilePosition ptr : pos
   TypeContext ptr.mut : typeContext
--> Operation list Type ) =>: applyElementOffset
+-> LIROp list Type ) =>: applyElementOffset
   refBase index typeContext types.tupleElementOffset .if =:: offset
     offset pos offsetPointer
       refBase index typeContext types.compositeGetElement optional.unwrap
@@ -602,19 +623,19 @@ proc( Type : valType NestedElementPath : path FilePosition ptr : pos ProgramCont
   ## proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) : forEach
   "nested element slots" ..panic
 end
-proc( Operation list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: dropSlots
-  count StackModType .DROP pos opStackMod list.append
+proc( LIROp list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> LIROp list ) =>: dropSlots
+  count pos lirDrop list.append
   count for ..drop
     context .stack branchTree.pop ? ! if
       "stack underflow" sb.copyPtr pos context [] .program .errors appendError
     end
   end
 end
-proc( Operation list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: rotateSlots
-  count StackModType .ROTATE pos opStackMod list.append
+proc( LIROp list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> LIROp list ) =>: rotateSlots
+  count pos lirRotate list.append
   ## TODO:! apply stack effect
 end
-proc( Operation list ElementSlotInfo StackValue FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list ) =>: setTupleSlots
+proc( LIROp list ElementSlotInfo StackValue FilePosition ptr : pos ConverterContext ptr.mut : context -> LIROp list ) =>: setTupleSlots
   context [] .program =:: program
   switch
     Reference case ..unreachable
@@ -700,10 +721,10 @@ proc( ElementSlotInfo i32 FilePosition ptr : pos ProgramContext ptr.mut : progra
 end
 
 proc(
-  Operation list
+  LIROp list
   Operation : mut: op
   ConverterContext ptr.mut : context
--> Operation list ) =>: compileOp
+-> LIROp list ) =>: compileOp
   context [] .program =:: program
   program .errors =:: errors
   program .idContext =:: idContext
@@ -718,11 +739,11 @@ proc(
         context .stack $1 branchTree.push
       switch
         Reference case
-          constVal op .dataType op .pos program opConstReference list.append
+          constVal op .dataType op .pos program lirConstRef list.append
         return
         Empty case return
-        Value case
-          op list.append
+        Value .case
+          constVal >$ op .pos program lirConst list.append
         return
         Val2 .case
           constVal .Array .if
@@ -733,8 +754,8 @@ proc(
               ..drop.2 return
             end
             >>$
-              $1 0 [] $3 .0 ValType.asType op .pos opConst list.append
-              >$ 1 [] >>$ .1 ValType.asType op .pos opConst list.append
+              $1 0 [] $3 .0 op .pos program lirConst list.append
+              >$ 1 [] >>$ .1 op .pos program lirConst list.append
             return
           else
             "unsupported constant for Val2 expected Array got: " sb.copyPtr
@@ -743,33 +764,57 @@ proc(
             ..drop.2 return
           end
         break
-        Val3 .case "unimplemented: val3 constants" ..panic break
+        Val3 .case
+          constVal .Array .if
+            $ .length 3 != if
+              "unsupported constant for Val3 expected Array length 3 got: " sb.copyPtr
+                constVal typeContext sb.appendConstant
+              op .pos errors appendError
+              ..drop.2 return
+            end
+            >>$
+              $1 0 [] $3 .0 op .pos program lirConst list.append
+              $1 1 [] $3 .1 op .pos program lirConst list.append
+              >$ 2 [] >>$ .2 op .pos program lirConst list.append
+            return
+          else
+            "unsupported constant for Val3 expected Array got: " sb.copyPtr
+              constVal typeContext sb.appendConstant
+            op .pos errors appendError
+            ..drop.2 return
+          end
+        break
       end
     break
-    EndProc PanicWithMessage case ## no stack change
-      op list.append return
-    break
-    ProcPtr case ## push value
+    EndProc case op .pos lirEndProc list.append return
+    ## TODO: move panic handler to standard libary
+    PanicWithMessage .case op .pos lirPanic list.append return
+    ProcPtr .case ## push value
       context .stack ValType .FPTR StackValue .Value branchTree.push
-      op list.append return
+      op .pos lirProcPtr list.append return
     break
     AutoCast Cast Cast! BitCast case ## unary operation
-      ## TODO: decay references, update val-type
+      ## TODO! convert casts to LIR
+      "unimplemented: casts" ..panic
       op list.append return
     break
     RuntimeAssert case
       types.primitive.BOOL op .pos context decayReference
+      ## TODO: lower assert to  "! if <msg> ..panic end"
+      "unimplemented: assert" ..panic
       op list.append return
     break
     Switch case
       op .dataType op .pos context decayReference
       ## TODO: update branches
+      "unimplemented: switch" ..panic
       op list.append return
     break
     BuiltIn .case
       ## TODO: update stack
-      ..drop
-      op list.append return
+      "unimplemented: builtIns" ..panic
+      op .dataType op .pos program toValType op .pos lirBuiltIn list.append
+      return
     break
     StackMod .case $ .modType switch
         DROP case
@@ -779,7 +824,7 @@ proc(
                 [] stackValSlots +
               end
             end
-          StackModType .DROP op .pos opStackMod list.append
+          op .pos lirDrop list.append
         return
         COPY case
           "unimplemented: copy" ..panic
@@ -790,6 +835,7 @@ proc(
       end
     break
     AtId .case =:: idInfo
+      "unimplemented: atId" ..panic
       context .stack ValType .PTR StackValue .Value branchTree.push
         idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
           idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
@@ -801,6 +847,7 @@ proc(
       return
     break
     GetId SetId .case =:: idInfo
+      "unimplemented: getId/setId" ..panic
       op .dataType op .pos program toValType
         op .val .GetId ? if
           context .stack $1 branchTree.push
@@ -894,10 +941,14 @@ proc(
           return
         end
       end index op .pos typeContext applyElementOffset =:: eltType
-        isPtr ! and eltType typeContext types.isValueType if
-          ## TODO? delayed dereferencing of value-types
+        isPtr ! if
+          ## TODO delayed dereferencing of value-types
           ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
-          eltType BuiltIn .GET_PTR op .pos opBuiltIn list.append
+          eltType op .pos program toValType switch
+            Empty Reference case break
+            Value .case BuiltIn .GET_PTR >$ op .pos lirBuiltIn list.append return
+            Val2 Val3 case "unimplemented: multi-dererference" ..panic
+          end
         end
       return
     break
@@ -925,17 +976,21 @@ proc(
       end
         isPtr ! if ## preserve reference on stack
           >$
-            1 StackModType .ROTATE op .pos opStackMod list.append
-            1 StackModType .COPY op .pos opStackMod list.append
+            1 op .pos lirRotate list.append
+            1 op .pos lirCopy list.append
           <$
         end
       index op .pos typeContext applyElementOffset
-          $ typeContext types.isValueType if
-            BuiltIn .SET_PTR
-          else
-            BuiltIn .COPY_PTR
-          end
-        op .pos opBuiltIn list.append
+        ## TODO: extract to procedure "setElementPtr"
+      op .pos program toValType switch
+        Empty case return
+        Reference case
+          "unimplemented: copy-ptr" ..panic
+          ##BuiltIn .COPY_PTR op .pos lirBuiltIn list.append
+        return
+        Value .case BuiltIn .SET_PTR >$ op .pos lirBuiltIn list.append return
+        Val2 Val3 case "unimplemented: multi-value setPtrElement" ..panic
+      end
       return
     break
     SetNestedElement .case =:: path
@@ -962,11 +1017,11 @@ proc(
       end
         isPtr ! if ## preserve value on stack
           >$
-            1 StackModType .ROTATE op .pos opStackMod list.append
-            1 StackModType .COPY op .pos opStackMod list.append
+            1 op .pos lirRotate list.append
+            1 op .pos lirCopy list.append
           <$
         end
-        ( Operation list : ops Type : eltType ) new
+        ( LIROp list : ops Type : eltType ) new
           ( TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
           path >$ @{ ## <data> <index> <curry> | <ops> <eltType>
             $2 .ops
@@ -977,17 +1032,20 @@ proc(
             .ops=
           } typeContext op .pos Curry new NestedElementPath.forEach
         $ .ops
-        >$ .eltType
-          $ typeContext types.isValueType if
-            BuiltIn .SET_PTR
-          else
-            BuiltIn .COPY_PTR
-          end
-        op .pos opBuiltIn list.append
+        >$ .eltType op .pos program toValType switch
+          Empty case return
+          Reference case
+            "unimplemented: copy-ptr" ..panic
+            ##BuiltIn .COPY_PTR op .pos lirBuiltIn list.append
+          return
+          Value .case BuiltIn .SET_PTR >$ op .pos lirBuiltIn list.append return
+          Val2 Val3 case "unimplemented: multi-value setPtrElement" ..panic
+        end
       return
     break
     ## TODO vvv------vvvv split composites
     ImplementProcedure case
+      "unimplemented: ImplementProcedure" ..panic
       op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
       outArgNames slice.copy context .outArgNames=
         $ optional.wrap context .currentProcType=
@@ -1017,6 +1075,7 @@ proc(
         list.append
       return
     DeclareId .case =:: idInfo
+      "unimplemented: DeclareId" ..panic
       context [] .variables
         ## VariableInfo
           idInfo .nameId
@@ -1026,6 +1085,7 @@ proc(
       context .variables=
       op list.append return ## nothing to change
     Copy case
+      "unimplemented: Copy" ..panic
       op .dataType =:: baseType
       _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
@@ -1059,6 +1119,7 @@ proc(
         end
       return
     New NewUnion case
+      "unimplemented: New" ..panic
       op .dataType typeContext types.isValueType if
         op list.append return
       end
@@ -1106,8 +1167,9 @@ proc(
         end
       return
     Call CallPtr case
+      "unimplemented: Call" ..panic
       op .dataType
-        $ typeContext types.getPointerBaseType .if >$ ..drop end
+        $ typeContext types.getPointerBaseType #+.if+# if >$ ..drop end
       =:: calledType
       =:: mut: newOps
       calledType newOps@
@@ -1143,6 +1205,7 @@ proc(
       return
     break
     Return case
+      "unimplemented: Return" ..panic
       context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
       ## TODO? don't return out-args by value independent of back-end
       ##  ! how to deal with value args mixed with non-value args
@@ -1178,6 +1241,7 @@ proc(
       return
     break
     LocalLabel .case =:: labelInfo
+      "unimplemented: LocalLabel" ..panic
       labelInfo .labelType switch
         HINT_START HINT_END case
           ## move mergable operation after start hint
@@ -1193,6 +1257,7 @@ proc(
       op list.append return
     break
     LocalJump .case =:: jumpInfo
+      "unimplemented: LocalJump" ..panic
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
       ## fuse compare+jumpif
         jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
@@ -1226,10 +1291,10 @@ end
 
 proc(
   Operation slice.mut : mut: oldOps
-  Operation list ptr.mut : tmpOps
+  LIROp list ptr.mut : tmpOps
   VariableInfo list ptr.mut : variables
   ConverterContext ptr.mut : context
--> Operation slice.mut ) =>: convertProc
+-> LIROp slice.mut ) =>: convertProc
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -1264,7 +1329,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile2
   ConverterContext new =:: mut: contextData
   contextData@ =:: context
   program [] .globalOps list.clear program .globalOps= ## global ops are no longer needed
-  Operation list.empty =:: mut: tmpOps
+  LIROp list.empty =:: mut: tmpOps
   program [] .procedures for ProcId.getProcInfo =:: currentProc
     currentProc [] .flags ProcFlags.IS_STATIC ProcFlags.HAS_STATIC_ARG | & ? if continue end
     currentProc .implementation .Code .else ..drop
@@ -1283,7 +1348,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile2
       tmpOps@
       impl .variables
       context
-    convertProc impl .codeState .PreCompiled=
+    convertProc ..drop ##impl .codeState .PreCompiled=
   end
   tmpOps list.free ..drop
   context .stack branchTree.free
