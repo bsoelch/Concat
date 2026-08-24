@@ -66,6 +66,11 @@ namespace: LIROp
   ( type : T -> type ) =>: typed
     ( T : val ValType : valType )
   end
+  struct(
+    LocalLabelId : label
+    CompareType : cmpType
+    ValType : dataType
+  ) =:: JumpInfo
   union(
     _ : Nop
     bool : ConstBool
@@ -81,6 +86,8 @@ namespace: LIROp
     IdentifierInfo typed : SetId3
     IdentifierInfo : AtId
     BuiltIn typed : shadow: BuiltIn
+    LocalLabelInfo : LocalLabel
+    JumpInfo : LocalJump
     _ : EndProc
     i32 : Copy
     i32 : Drop
@@ -203,11 +210,11 @@ proc( CompareType -> CompareType ) =>: adjustFlippedFloatCmpType
     default "unexpected compare-type for float" ..panic
   end
 end
-proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
-  cmpType .FALSE or cmpType .TRUE end "can only merge cmp.true and cmp.false" assert
-  cmpType .FALSE =:: flip
+proc( CompareType #+cmpType+# BuiltIn #+builtIn+# -> CompareType ValType ) =>: mergeJumpIf
+  $1 .FALSE or $1 .TRUE end "can only merge cmp.true and cmp.false" assert
+  >$ .FALSE =:: flip
   BuiltIn ..length 221 == "no new builtins" assert
-  builtIn switch
+  $ switch
     NOT_BOOL case
       flip if CompareType .TRUE else CompareType .FALSE end
     break
@@ -243,22 +250,22 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
     break
     default "unsupported built-in for jump-merge" ..panic
   end
-  builtIn switch
-    EQ_BOOL NE_BOOL case types.primitive.BOOL break
+  >$ switch
+    EQ_BOOL NE_BOOL case ValType .BOOL break
     EQ_I8 NE_I8 LT_I8 LE_I8 GE_I8 GT_I8 ULT_I8 ULE_I8 UGE_I8 UGT_I8 case
-      types.primitive.I8 break
+      ValType .I8 break
     EQ_I16 NE_I16 LT_I16 LE_I16 GE_I16 GT_I16 ULT_I16 ULE_I16 UGE_I16 UGT_I16 case
-      types.primitive.I16 break
+      ValType .I16 break
     EQ_I32 NE_I32 LT_I32 LE_I32 GE_I32 GT_I32 ULT_I32 ULE_I32 UGE_I32 UGT_I32 case
-      types.primitive.I32 break
+      ValType .I32 break
     EQ_I64 NE_I64 LT_I64 LE_I64 GE_I64 GT_I64 ULT_I64 ULE_I64 UGE_I64 UGT_I64 case
-      types.primitive.I64 break
+      ValType .I64 break
     EQ_F32 NE_F32 LT_F32 LE_F32 GE_F32 GT_F32 case
       flip if adjustFlippedFloatCmpType end
-      types.primitive.F32 break
+      ValType .F32 break
     EQ_F64 NE_F64 LT_F64 LE_F64 GE_F64 GT_F64 case
       flip if adjustFlippedFloatCmpType end
-      types.primitive.F64 break
+      ValType .F64 break
     default "unsupported built-in for jump-merge" ..panic
   end
 end
@@ -284,6 +291,12 @@ proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# Progr
 end
 proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcPtr
   <$ LIROp.Data .ConstProcPtr >$ LIROp new
+end
+proc( LocalLabelInfo #+labelInfo+# FilePosition ptr #+pos+# -> LIROp ) =>: lirLabel
+  >$ LIROp.Data .LocalLabel >$ LIROp new
+end
+proc( LocalLabelId #+labelInfo+# CompareType #+cmp+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirJump
+  <<<$ LIROp.JumpInfo new LIROp.Data .LocalJump >$ LIROp new
 end
 proc( FilePosition ptr #+pos+# -> LIROp ) =>: lirEndProc
   LIROp.Data .EndProc >$ LIROp new
@@ -1241,43 +1254,33 @@ proc(
       return
     break
     LocalLabel .case =:: labelInfo
-      "unimplemented: LocalLabel" ..panic
       labelInfo .labelType switch
         HINT_START HINT_END case
           ## move mergable operation after start hint
-          $ list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
+          $ list.peek .and .data .BuiltIn .and .val [] canMergeJumpIf if
             list.pop optional.unwrap =:: tmp
-            op list.append
+            labelInfo op .pos lirLabel list.append
             tmp list.append
             return
           end
         break
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
-      op list.append return
-    break
+      labelInfo op .pos lirLabel list.append
+    return
     LocalJump .case =:: jumpInfo
-      "unimplemented: LocalJump" ..panic
-      0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
       ## fuse compare+jumpif
-        jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
-          jumpInfo .cmpType =:: mut: newCmpType
-          $ list.peek .and .val .BuiltIn .and [] .NOT_BOOL if
-            list.pop ..drop
-            newCmpType
-              .TRUE if CompareType .FALSE else CompareType .TRUE end
-            newCmpType=
-          else _BACKEND_ .ASM and $ list.peek .and .val .BuiltIn .and [] canMergeJumpIf _if
-            list.pop .and .val .BuiltIn .else ..unreachable end =:: builtInVal
-            newCmpType
-              builtInVal mergeJumpIf op@ .dataType=
-            newCmpType=
-          end
-          jumpInfo .cmpType newCmpType != if
-            newCmpType op@ .val .LocalJump .if .cmpType= else ..unreachable end
-          end
-        end
-      op list.append
+      jumpInfo .labelId jumpInfo .cmpType
+        $ .TRUE or $ .FALSE if
+          $2 list.peek .and .data .BuiltIn .and .val [] .NOT_BOOL if
+            >>$ list.pop ..drop <<$
+            .TRUE if CompareType .FALSE else CompareType .TRUE end ValType .BOOL
+          else _BACKEND_ .ASM and $2 list.peek .and .data .BuiltIn .and .val [] canMergeJumpIf _if
+            >>$ list.pop .and .data .BuiltIn .if .val else ..unreachable end
+            >$ <<<$ ## jmpDst cmpType list builtIn -- list jmpDst cmpType builtIn
+            mergeJumpIf
+          else ValType .BOOL end
+        else ValType .BOOL end op .pos lirJump list.append
     return
     CompilerInfo case return ## TODO? preserve compilerInfo ops
     ConstantReference Error case

@@ -42,7 +42,7 @@ enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareTyp
 struct(
   LocalLabelId : labelId
   LocalLabelType : labelType
-) =:: LocalLabelInfo
+) =:: export: LocalLabelInfo
 struct(
   LocalLabelId : labelId
   JumpDistance : jumpDistance
