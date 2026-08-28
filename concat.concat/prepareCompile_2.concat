@@ -1056,9 +1056,11 @@ proc(
         end
       return
     break
-    ## TODO vvv------vvvv split composites
     ImplementProcedure case
       "unimplemented: ImplementProcedure" ..panic
+      ## 1. split values into slots -> op start proc
+      ## 2. generate declarations&assignments for named args
+      ## 3. remember slots for out-args (? simply put values in low stack slots)
       op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
       outArgNames slice.copy context .outArgNames=
         $ optional.wrap context .currentProcType=

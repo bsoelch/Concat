@@ -1,0 +1,11 @@
+enum( A B C D E ) =:: anEnum
+proc( anEnum -> i32 ) =>: inline.never: test
+  switch
+    A case 1 return
+    B C case 2 return
+    _ case 3 return
+  end
+end
+proc( -> ) =>: main
+  anEnum .D test ..drop
+end
