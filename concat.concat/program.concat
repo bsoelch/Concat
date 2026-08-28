@@ -387,7 +387,6 @@ union(
                Type : BitCast
                   _ : Copy
   StackModification : StackMod
-             string : RuntimeAssert
           ErrorType : Error
              string : PanicWithMessage
        CompilerInfo : shadow: CompilerInfo
@@ -679,12 +678,6 @@ proc( Type : t FilePosition ptr : pos -> Operation ) =>: export: opCopy
 end
 proc( string : message FilePosition ptr : pos -> Operation ) =>: export: opPanicWithMessage
   pos message OpValue .PanicWithMessage Type .Undefined Operation new return
-end
-proc(
-  string : message
-  FilePosition ptr : pos
--> Operation ) =>: export: opRuntimeAssert
-  pos message OpValue .RuntimeAssert Type .Undefined Operation new return
 end
 proc(
   ErrorType : errorType
@@ -1417,11 +1410,6 @@ namespace: sb
         "copy( " sb.appendS
         op .dataType typeContext sb.appendType
         " )" sb.appendS
-      break
-      RuntimeAssert .case =:: msg
-        '"' sb.appendC
-        msg sb.appendStr
-        "\" assert" sb.appendS
       break
       Error .case switch
           ERROR case "..compiler.error" sb.appendS break

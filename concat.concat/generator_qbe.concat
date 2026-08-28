@@ -3658,37 +3658,6 @@ proc(
         retId ValueId.sbAppend
         '\n' sb.appendC
       return
-    RuntimeAssert .case =:: msg
-      ## BranchId
-        BranchType .NEXT
-        context nextJumpLabelId
-      BranchId new =:: successBranch
-      ## BranchId
-        BranchType .ERROR
-        context nextJumpLabelId
-      BranchId new =:: errorBranch
-      sb
-        op [] .pos sb.appendPosQBE
-        "## assert\n":s sb.appendStr
-        "jnz ":s sb.appendStr
-        op [] .pos context popValue ValueId.sbAppend
-        ", ":s sb.appendStr
-        successBranch sb.appendBranchId
-        ", ":s sb.appendStr
-        errorBranch sb.appendBranchId
-        '\n' sb.appendC
-        errorBranch sb.appendBranchId
-        '\n' sb.appendC
-        "call $printf(l $":s sb.appendStr
-        ASSERT_FORMAT sb.appendS
-        ",...,l ":s sb.appendStr
-        msg .length sb.appendI
-        ",l ":s sb.appendStr
-        msg context sb.appendStringPtrConstQBE
-        op [] .pos prog appendPosPrintfArgs
-        ")\ncall $exit(w 1)\nhlt\n":s sb.appendStr
-        successBranch "end assert":s context startBranch
-      return
     PanicWithMessage .case =:: message
       false context .reachable=
       sb

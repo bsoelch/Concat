@@ -5576,7 +5576,16 @@ proc(
         state requireTypes .Err ? if
           continue.opLoop
         end
-        message op .pos opRuntimeAssert state appendOp ..drop
+        program program.nextLocalLabel
+          $ LocalLabelType .HINT_START op .pos state localLabel
+          $ CompareType .TRUE op .pos state localJump
+          "assertion failed: " ..length message .length + i32 cast.u
+            constContext
+          char8 prepareConstPrimitiveArray sb.wrapSlice sb.clear
+            "assertion failed: ":s sb.appendStr
+            message sb.appendStr
+          sb.asStr op .pos opPanicWithMessage state appendOp ..drop
+        LocalLabelType .LABEL_END op .pos state localLabel
         continue.opLoop
       Panic case
         op .pos state popString =:: message

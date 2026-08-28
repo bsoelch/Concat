@@ -811,12 +811,6 @@ proc(
       "unimplemented: casts" ..panic
       op list.append return
     break
-    RuntimeAssert case
-      types.primitive.BOOL op .pos context decayReference
-      ## TODO: lower assert to  "! if <msg> ..panic end"
-      "unimplemented: assert" ..panic
-      op list.append return
-    break
     Switch case
       op .dataType op .pos context decayReference
       ## TODO: update branches

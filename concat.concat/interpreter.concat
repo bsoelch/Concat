@@ -1628,13 +1628,6 @@ proc(
         end
       end
       EvalResult .Ok return
-    RuntimeAssert .case =:: message
-      op [] .pos context popCondition .and ! if
-        "assertion failed: " sb.copyPtr
-          message sb.appendStr
-        op [] .pos errors appendError
-      end
-      EvalResult .Ok return
     PanicWithMessage .case =:: message
       "PANIC!: " sb.copyPtr
         message sb.appendStr

@@ -332,7 +332,7 @@ proc(
   op .val switch
     NOP case newOps return ## ignore no-ops
     EndProc PanicWithMessage ProcPtr AutoCast Cast Cast! BitCast
-        RuntimeAssert Switch BuiltIn StackMod case ## unary operation
+        Switch BuiltIn StackMod case ## unary operation
       newOps op list.append return
     break
     AtId .case =:: idInfo
