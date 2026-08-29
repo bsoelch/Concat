@@ -6218,9 +6218,11 @@ proc(
         idContext
         program .errors
       id.declareIdentifier .if id.asIdInfo
-         $ .nameId id.identifierFlags id.FLAG_STATIC & ? ! if
+         $ .nameId id.identifierFlags id.FLAG_STATIC & ? ! and argType typeContext types.isEmpty ! if
           argType $1 procPos opDeclareId state appendOp ..drop
-          stackArgs StackModType .ROTATE procPos opStackMod state appendOp ..drop
+          stackArgs 0 != if
+            stackArgs StackModType .ROTATE procPos opStackMod state appendOp ..drop
+          end
           argType >$ procPos opSetId state appendOp ..drop
         else ..drop end
       else
