@@ -177,8 +177,8 @@ proc( Operation list
   end
 end
 
-union( Operation list ptr.mut : Call Operation list ptr.mut : CallPtr _ : Impl ) =:: ProcSignatureType
-proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Type NameId optional slice ) =>: updateProcType
+enum( CALL CALL_PTR IMPL ) =:: ProcSignatureType
+proc( Operation list Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Operation list Type NameId optional slice ) =>: updateProcType
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -197,14 +197,14 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       arg typeContext types.isEmpty or argNames index slice.get .and .and id.identifierFlags id.FLAG_STATIC & ? if
         needNewArgs ! if
           args index slice.head list.appendSlice
-          procType .Impl ? if
+          procType .IMPL if
             newArgNames argNames index slice.head list.appendSlice newArgNames=
           end
         end
         true needNewArgs=
         continue
       end
-      needNewArgs and procType .Impl ? if
+      needNewArgs and procType .IMPL if
         argNames index slice.get .if newArgNames >$ list.append newArgNames= end
       end
       arg typeContext types.isValueType if
@@ -213,17 +213,13 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       end
       needNewArgs ! if
         args index slice.head list.appendSlice
-        procType .Impl ? if
+        procType .IMPL if
           newArgNames argNames index 1 + slice.head list.appendSlice newArgNames=
         end
       end
       true needNewArgs=
       arg true typeContext types.getAddressType =:: argType
       argType list.append
-      argNames index slice.get .and .if =:: argName
-        argName id.FLAG_IS_REFERENCE id.addIdentifierFlags
-        argType argName idContext id.getIdData .else "arg has data" ..panic end .valueType=
-      end
     end
   =:: mut: newArgs
   program .nameBuffer [] .length =:: nameOffset
@@ -251,13 +247,13 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
       newArgs
         needNewArgs ! if
           args list.appendSlice 
-          procType .Impl ? if
+          procType .IMPL if
             newArgNames
               argNames list.appendSlice
             newArgNames=
           end
         end
-        procType .Impl ? and $ .length newArgNames .length u> if
+        procType .IMPL and $ .length newArgNames .length u> if
           newArgNames
             $1 .length $1 .length - for ..drop NameId optional.empty list.append end
           newArgNames=
@@ -265,10 +261,10 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
         true needNewArgs=
         outArgType list.append
       newArgs=
-      outType true pos context newTmpVar =:: tmpId
+      procType .IMPL if outArgType else outType end true pos context newTmpVar =:: tmpId
       procType switch
-        Call CallPtr .case
-          $ []
+        CALL CALL_PTR case
+          >$
             ## opDeclareId
               outType
               tmpId
@@ -279,20 +275,18 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
               tmpId
               pos
             opAtId list.append
-            procType .CallPtr ? if
+            procType .CALL_PTR if
               1 StackModType .ROTATE pos opStackMod list.append
             end
-          >$ =[]
-          tmpId .nameId
+          <$
         break
-        Impl case ## don't use newTmpVar to avoid adding to proc-variables twice
-          id.FLAG_NONE pos nameContext id.newTmpIdentifier
-          $ outArgType pos idContext id.declareTmpVar
+        IMPL case ## don't use newTmpVar to avoid adding to proc-variables twice
           newArgNames
-            $1 optional.wrap list.append
+            tmpId .nameId optional.wrap list.append
           newArgNames=
         break
       end
+      tmpId .nameId
       program [] .nameBuffer
         index $1 .length - for ..drop NameId optional.empty list.append end
         >$ optional.wrap list.append
@@ -319,7 +313,7 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
 end
 
 proc(
-  Operation list : newOps
+  Operation list
   Operation : mut: op
   ConverterContext ptr.mut : context
 -> Operation list ) =>: compileOp
@@ -330,115 +324,85 @@ proc(
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   op .val switch
-    NOP case newOps return ## ignore no-ops
+    NOP case return ## ignore no-ops
     EndProc PanicWithMessage ProcPtr AutoCast Cast Cast! BitCast
         Switch BuiltIn StackMod case ## unary operation
-      newOps op list.append return
+      op list.append return
     break
     AtId .case =:: idInfo
-      newOps
-        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
-            idInfo op .pos
-          opGetId list.append
-        else
-          op list.append
-        end
-      return
-    break
+      op list.append
+    return
     ## TODO vvv------vvvv do stack updates + split composites
     GetId SetId .case =:: idInfo
       op .dataType typeContext types.isValueType if
-        newOps
-          op list.append ## element access on value-type
-        return
+        op list.append return ## element access on value-type
       end
-      newOps
-        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          idInfo .nameId
-            idContext id.getIdData .else "arg has data" ..panic end .valueType []
-          idInfo op .pos opGetId list.append
-        else
-          ## TODO? consistent type for atId: always var-type or always address-type?
-          op .dataType idInfo op .pos opAtId list.append
-        end
-        op .val .SetId ? if
-          op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
-        end
-      return
-    break
+      ## TODO? consistent type for atId: always var-type or always address-type?
+      op .dataType idInfo op .pos opAtId list.append
+      op .val .SetId ? if
+        op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
+      end
+    return
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
       op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
-        return
+        op list.append return ## element access on value-type
       else op .dataType end =:: refBase
-      newOps
-        refBase index op .pos typeContext applyElementOffset =:: eltType
-        isPtr ! and eltType typeContext types.isValueType if
-          ## TODO? delayed dereferencing of value-types
-          ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
-          eltType BuiltIn .GET_PTR op .pos opBuiltIn list.append
-        end
-      return
-    break
+      refBase index op .pos typeContext applyElementOffset =:: eltType
+      isPtr ! and eltType typeContext types.isValueType if
+        ## TODO? delayed dereferencing of value-types
+        ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
+        eltType BuiltIn .GET_PTR op .pos opBuiltIn list.append
+      end
+    return
     SetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
       op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
-        return
+        op list.append return ## element access on value-type
       else op .dataType end =:: refBase
-      newOps
-        isPtr ! if ## preserve value on stack
-          1 StackModType .ROTATE op .pos opStackMod list.append
-          1 StackModType .COPY op .pos opStackMod list.append
+      isPtr ! if ## preserve value on stack
+        1 StackModType .ROTATE op .pos opStackMod list.append
+        1 StackModType .COPY op .pos opStackMod list.append
+      end
+      refBase index op .pos typeContext applyElementOffset
+        $ typeContext types.isValueType if
+          BuiltIn .SET_PTR
+        else
+          BuiltIn .COPY_PTR
         end
-        refBase index op .pos typeContext applyElementOffset
-          $ typeContext types.isValueType if
-            BuiltIn .SET_PTR
-          else
-            BuiltIn .COPY_PTR
-          end
-        op .pos opBuiltIn list.append
-      return
-    break
+      op .pos opBuiltIn list.append
+    return
     SetNestedElement .case =:: path
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
       .else
       op .dataType typeContext types.isValueType _if
-        newOps
-          op list.append ## element access on value-type
-        return
+        op list.append return ## element access on value-type
       else op .dataType end =:: mut: eltType
-      newOps
-        isPtr ! if ## preserve value on stack
-          1 StackModType .ROTATE op .pos opStackMod list.append
-          1 StackModType .COPY op .pos opStackMod list.append
+      isPtr ! if ## preserve value on stack
+        1 StackModType .ROTATE op .pos opStackMod list.append
+        1 StackModType .COPY op .pos opStackMod list.append
+      end
+      ( Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
+      path >$ ( Operation list i32 : index Curry : curry -> Operation list ) =>
+        curry .eltType []
+          index
+        curry .pos curry .typeContext applyElementOffset curry .eltType =[]
+      end eltType@ typeContext op .pos Curry new NestedElementPath.forEach
+      eltType
+        $ typeContext types.isValueType if
+          BuiltIn .SET_PTR
+        else
+          BuiltIn .COPY_PTR
         end
-        ( Type ptr.mut : shadow: eltType TypeContext ptr.mut : shadow: typeContext FilePosition ptr : pos ) =:: Curry
-        path >$ ( Operation list i32 : index Curry : curry -> Operation list ) =>
-          curry .eltType []
-            index
-          curry .pos curry .typeContext applyElementOffset curry .eltType =[]
-        end eltType@ typeContext op .pos Curry new NestedElementPath.forEach
-        eltType
-          $ typeContext types.isValueType if
-            BuiltIn .SET_PTR
-          else
-            BuiltIn .COPY_PTR
-          end
-        op .pos opBuiltIn list.append
-      return
-    break
+      op .pos opBuiltIn list.append
+    return
     ImplementProcedure case
-      op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
+      op .dataType ProcSignatureType .IMPL op .pos context updateProcType =:: outArgNames
       outArgNames slice.copy context .outArgNames=
         $ optional.wrap context .currentProcType=
       =:: procType
@@ -462,11 +426,23 @@ proc(
           VariableInfo new list.append
         finally i 1 + end ..drop
       context .variables=
-      newOps
-        op
-          procType >$ .dataType=
-        list.append
-      return
+      op
+        procType >$ .dataType=
+      list.append
+      outArgNames slice.reversed for
+        <unwrap> idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
+          ## opDeclareId
+            idData [] .valueType
+            idData id.asIdInfo
+            op .pos
+          opDeclareId list.append
+        ## opSetId
+          idData [] .valueType
+          idData id.asIdInfo
+          op .pos
+        opSetId list.append
+      end
+    return
     DeclareId .case =:: idInfo
       context [] .variables
         ## VariableInfo
@@ -475,71 +451,74 @@ proc(
           VariableType .LOCAL_VAR
         VariableInfo new list.append
       context .variables=
-      newOps
-        op list.append ## nothing to change
-      return
+      op list.append ## nothing to change
+    return
     Constant .case =:: constVal
       op .dataType typeContext types.isValueType if
-        newOps
-          op list.append
-        return
+        op list.append return
       end
-      newOps
-        constVal op .dataType op .pos program opConstReference list.append
-      return
+      constVal op .dataType op .pos program opConstReference list.append
+    return
     Copy case
       op .dataType =:: baseType
       _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
         baseType typeContext types.isValueType if
-          newOps return ## copy of value type is no-op
+          return ## copy of value type is no-op
         end
       else
         baseType typeContext types.unwrapNamed types.isPrimitive or
             baseType typeContext types.isPointer if
-          newOps return ## primitive copy is no-op
+          return ## primitive copy is no-op
         end
       end
       baseType true op .pos context newTmpVar =:: tmpId
-      newOps
-        op .dataType baseType types.typeEquals ! if
-          ## opAutoCast
-            op .dataType
-            0
-            baseType
-            op .pos
-          opAutoCast list.append
-        end
-        baseType tmpId op .pos opDeclareId list.append
-        baseType typeContext types.isValueType ! if
-          baseType tmpId op .pos opAtId list.append
-          baseType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
-          baseType tmpId op .pos opAtId list.append
-        else
-          baseType tmpId op .pos opSetId list.append
-          baseType tmpId op .pos opGetId list.append
-        end
-      return
+      op .dataType baseType types.typeEquals ! if
+        ## opAutoCast
+          op .dataType
+          0
+          baseType
+          op .pos
+        opAutoCast list.append
+      end
+      baseType tmpId op .pos opDeclareId list.append
+      baseType typeContext types.isValueType ! if
+        baseType tmpId op .pos opAtId list.append
+        baseType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
+        baseType tmpId op .pos opAtId list.append
+      else
+        baseType tmpId op .pos opSetId list.append
+        baseType tmpId op .pos opGetId list.append
+      end
+    return
     New NewUnion case
       op .dataType typeContext types.isValueType if
-        newOps
-          op list.append
-        return
+        op list.append return
       end
       op .dataType true op .pos context newTmpVar =:: tmpId
-      newOps
-        ## opDeclareId
-          op .dataType
-          tmpId
-          op .pos
-        opDeclareId list.append
-        ## opAtId
-          op .dataType
-          tmpId
-          op .pos
-        opAtId list.append
-        op .val .NewUnion .if =:: index
+      ## opDeclareId
+        op .dataType
+        tmpId
+        op .pos
+      opDeclareId list.append
+      ## opAtId
+        op .dataType
+        tmpId
+        op .pos
+      opAtId list.append
+      op .val .NewUnion .if =:: index
+        1 StackModType .ROTATE op .pos opStackMod list.append
+        1 StackModType .COPY op .pos opStackMod list.append
+        op .dataType index op .pos typeContext applyElementOffset
+          $ typeContext types.isValueType if
+            BuiltIn .SET_PTR
+          else
+            BuiltIn .COPY_PTR
+          end
+        op .pos opBuiltIn list.append
+      else ..drop op .dataType typeContext types.isTuple or op .dataType typeContext types.isTaggedUnion _if
+        op .dataType typeContext types.compositeEltCount while $ 1 - <$ 0 != do =:: index
           1 StackModType .ROTATE op .pos opStackMod list.append
           1 StackModType .COPY op .pos opStackMod list.append
           op .dataType index op .pos typeContext applyElementOffset
@@ -549,65 +528,50 @@ proc(
               BuiltIn .COPY_PTR
             end
           op .pos opBuiltIn list.append
-        else ..drop op .dataType typeContext types.isTuple or op .dataType typeContext types.isTaggedUnion _if
-          op .dataType typeContext types.compositeEltCount while $ 1 - <$ 0 != do =:: index
-            1 StackModType .ROTATE op .pos opStackMod list.append
-            1 StackModType .COPY op .pos opStackMod list.append
-            op .dataType index op .pos typeContext applyElementOffset
-              $ typeContext types.isValueType if
-                BuiltIn .SET_PTR
-              else
-                BuiltIn .COPY_PTR
-              end
-            op .pos opBuiltIn list.append
-          finally index end ..drop
-        else op .dataType typeContext types.isArray _if
-          0 StackModType .COPY op .pos opStackMod list.append
-          op .dataType BuiltIn .CLEAR_PTR op .pos opBuiltIn list.append
-        else
-          0 sb.create
-            op .dataType typeContext sb.appendType
-          sb.asStr io.println
-          "unexpected type for new" ..panic
-        end
-      return
+        finally index end ..drop
+      else op .dataType typeContext types.isArray _if
+        0 StackModType .COPY op .pos opStackMod list.append
+        op .dataType BuiltIn .CLEAR_PTR op .pos opBuiltIn list.append
+      else
+        0 sb.create
+          op .dataType typeContext sb.appendType
+        sb.asStr io.println
+        "unexpected type for new" ..panic
+      end
+    return
     Call CallPtr case
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       =:: calledType
-      newOps =:: mut: shadow: newOps
-      calledType newOps@
-        op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
+      calledType
+        op .val .CallPtr ? if ProcSignatureType .CALL_PTR else ProcSignatureType .CALL end
       op .pos context updateProcType =:: outArgNames =:: newProcType
-      newOps =:: shadow: newOps
-      newOps
-        op
-          newProcType
-            op .dataType typeContext types.isPointer if
-              false typeContext types.getAddressType
+      op
+        newProcType
+          op .dataType typeContext types.isPointer if
+            false typeContext types.getAddressType
+          end
+        >$ .dataType=
+      list.append
+      _BACKEND_ .QBE if
+        newProcType typeContext types.getProcOut .if .length 0 != else false end =:: hasValueRet
+        outArgNames for .else continue end
+          idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
+          idData [] .valueType
+            idData id.asIdInfo
+            op .pos
+            idData [] .valueType typeContext types.isValueType if
+              opGetId
+            else
+              opAtId
             end
-          >$ .dataType=
-        list.append
-        _BACKEND_ .QBE if
-          newProcType typeContext types.getProcOut .if .length 0 != else false end =:: hasValueRet
-          outArgNames for .else continue end
-            idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
-            idData [] .valueType
-              idData id.asIdInfo
-              op .pos
-              idData [] .valueType typeContext types.isValueType if
-                opGetId
-              else
-                opAtId
-              end
-            list.append
-            hasValueRet if
-              1 StackModType .ROTATE op .pos opStackMod list.append
-            end
+          list.append
+          hasValueRet if
+            1 StackModType .ROTATE op .pos opStackMod list.append
           end
         end
-      return
-    break
+      end
+    return
     Return case
       context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
       ## TODO? don't return out-args by value independent of back-end
@@ -615,56 +579,50 @@ proc(
       retType typeContext types.getProcOut .if .length i32 cast.u else 0 end
         _BACKEND_ .QBE if context .outArgNames [] .length i32 cast.u + end
       =:: mut: stackValCount
-      newOps
-        context .outArgNames [] for .else
-            continue
-          end =:: retName
-          stackValCount 1 u> if
-            stackValCount 1 - StackModType .ROTATE op .pos opStackMod list.append
-          end
-          retName idContext id.getIdData .else
-            "out-arg has no id-data" ..panic
-          end
-            $ [] .valueType =:: ptrType
-          id.asIdInfo ptrType <$ op .pos opGetId list.append
-          _BACKEND_ .QBE ! if
-            0 StackModType .COPY op .pos opStackMod list.append
-            stackValCount -_ StackModType .ROTATE op .pos opStackMod list.append
-          else
-            stackValCount 1 - stackValCount=
-          end
-          ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
-            $ typeContext types.isValueType if
-              BuiltIn .SET_PTR
-            else
-              BuiltIn .COPY_PTR
-            end
-          op .pos opBuiltIn list.append
+      context .outArgNames [] for .else
+          continue
+        end =:: retName
+        stackValCount 1 u> if
+          stackValCount 1 - StackModType .ROTATE op .pos opStackMod list.append
         end
-        op retType >$ .dataType= list.append
-      return
-    break
+        retName idContext id.getIdData .else
+          "out-arg has no id-data" ..panic
+        end
+          $ [] .valueType =:: ptrType
+        id.asIdInfo ptrType <$ op .pos opGetId list.append
+        _BACKEND_ .QBE ! if
+          0 StackModType .COPY op .pos opStackMod list.append
+          stackValCount -_ StackModType .ROTATE op .pos opStackMod list.append
+        else
+          stackValCount 1 - stackValCount=
+        end
+        ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
+          $ typeContext types.isValueType if
+            BuiltIn .SET_PTR
+          else
+            BuiltIn .COPY_PTR
+          end
+        op .pos opBuiltIn list.append
+      end
+      op retType >$ .dataType= list.append
+    return
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START HINT_END case
           ## move mergable operation after start hint
-          newOps list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
-            newOps
-              list.pop optional.unwrap =:: tmp
-              op list.append
-              tmp list.append
+          $ list.peek .and .val [] .BuiltIn .and canMergeJumpIf if
+            list.pop optional.unwrap =:: tmp
+            op list.append
+            tmp list.append
             return
           end
         break
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
-      newOps
-        op list.append
-      return
-    break
+      op list.append
+    return
     LocalJump .case =:: jumpInfo
       0:JumpDistance op@ .val .LocalJump .if .jumpDistance= else ..unreachable end
-      newOps
       ## fuse compare+jumpif
         jumpInfo .cmpType .TRUE or jumpInfo .cmpType .FALSE if
           jumpInfo .cmpType =:: mut: newCmpType
@@ -686,14 +644,13 @@ proc(
       op list.append
     return
     CompilerInfo case ## TODO? preserve compilerInfo ops
-      newOps return
+      return
     ConstantReference Error case
       break ## unsupported
   end
   "unsupported operation " sb.copyPtr
     op program sb.appendOp
   op .pos errors appendError
-  newOps return
 end
 
 proc(

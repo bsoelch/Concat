@@ -1,7 +1,6 @@
 ## import the complete standard library
 "array" import
 "slice" import
-"chars" import
 "list" import
 "map" import
 "mem" import

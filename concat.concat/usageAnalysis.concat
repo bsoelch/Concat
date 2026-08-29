@@ -346,15 +346,6 @@ proc(
   end
   op .val switch
     ImplementProcedure case
-      ## mark argument variables as initialized
-      op .dataType typeContext types.getProcArgNames for
-        .if =:: nameId
-          context .variableUses
-            nameId
-            VariableUses .Arg
-          map.put ..drop
-        end
-      end
       true context .reachable=
     break
     GetId .case =:: idInfo

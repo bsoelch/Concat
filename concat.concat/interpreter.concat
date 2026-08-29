@@ -1183,7 +1183,7 @@ proc(
       idInfo .idType switch
         GLOBAL_VAR TYPE case
           break
-        LOCAL_VAR TMP_VAR case
+        LOCAL_VAR TMP_VAR ARGUMENT case
           op [] .dataType =:: dataType
           context [] .localVariables .else
             "missing local variables " sb.copyPtr
@@ -1200,7 +1200,7 @@ proc(
             Constant new
           map.put ..drop
           EvalResult .Ok return
-        LABEL ARGUMENT PROCEDURE PROCEDURE_BUNDLE case break
+        LABEL PROCEDURE PROCEDURE_BUNDLE case break
       end
       "unsupported operation in constant evaluation: " sb.copyPtr
         op [] program sb.appendOp
@@ -2053,25 +2053,16 @@ namespace: interpreter
       context [] .stack argOffset [] =:: value
       context [] .stackInfo argOffset [] =:: valueInfo
       argOffset 1:iSize + argOffset=
-      nameId? .if =:: nameId ## store argument as value
-        context [] .localVariables optional.unwrap
-          nameId
-          ## Constant
-            value
-            valueInfo
-          Constant new
-        map.put ..drop
-      else ## push argument
-        context [] .stack
-          value list.append
-        context .stack=
-        context [] .stackInfo
-          ## ValueInfo
-            valueInfo .valueType
-            pos
-          ValueInfo new list.append
-        context .stackInfo=
-      end
+      ## push argument
+      context [] .stack
+        value list.append
+      context .stack=
+      context [] .stackInfo
+        ## ValueInfo
+          valueInfo .valueType
+          pos
+        ValueInfo new list.append
+      context .stackInfo=
     finally
       i 1 +
     end ..drop

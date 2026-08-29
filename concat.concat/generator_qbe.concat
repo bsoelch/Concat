@@ -2936,30 +2936,7 @@ proc(
             ValType .REFERENCE
           else
             argType context toValType
-          end =:: valType
-          argName? ! .if ## push argument
-            valType i ValueId .Arg context pushValue
-          else =:: argName valType .REFERENCE _if
-            argName appendLocalVar
-            " =" sb.appendS
-            valType sb.appendValTypeQBE
-            " copy " sb.appendS
-            i context sb.appendArgName
-            '\n' sb.appendC
-          else
-            argName appendLocalVar
-            " =l alloc" sb.appendS
-            argType op [] .pos context typeAlignmentInt 4 i64.max sb.appendI
-            ' ' sb.appendC
-            argType op [] .pos context typeSizeInt  4 i64.max sb.appendI
-            "\nstore" sb.appendS
-            argType StorageType .STORE op [] .pos context sb.appendTypeNameQBE
-            ' ' sb.appendC
-            i context sb.appendArgName
-            ", " sb.appendS
-            argName appendLocalVar
-            '\n' sb.appendC
-          end
+          end i ValueId .Arg context pushValue
           i 1 +
         end ..drop
         procInfo [] .implementation .Code .if =:: codeImpl
