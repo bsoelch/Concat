@@ -1,0 +1,34 @@
+## common code for IR files
+"common" import
+
+i64 =:: export: LocalLabelId
+namespace: LocalLabelId
+  proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
+  ## fast hash
+  proc( LocalLabelId -> i32 ) =>: export: hash i32 cast.u end
+  ## hash function that reduces collisions in low bits for non-consequtive values
+  proc( LocalLabelId -> i32 ) =>: export: skewHash
+    0
+      >$ i64 cast.u while $ 0 != do =:: x
+        11 * x 0x7 & i32 cast.u +
+      finally x 3 >>> end ..drop
+    return
+  end
+end
+enum( LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
+struct(
+  LocalLabelId : labelId
+  LocalLabelType : labelType
+) =:: export: LocalLabelInfo
+
+enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareType
+namespace: CompareType
+  {
+    "none":s "true":s "false":s "eq":s "ne":s
+    "lt":s "le":s "ge":s "gt":s
+    "ult":s "ule":s "uge":s "ugt":s
+  } =:: CMP_TYPE_NAMES
+  proc( stringBuilder CompareType -> stringBuilder ) =>: export: sbAppend
+    CMP_TYPE_NAMES@ >$ ..tag iSize cast.u [] sb.appendStr
+  end
+end

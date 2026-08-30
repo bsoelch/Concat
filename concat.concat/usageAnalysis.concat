@@ -109,7 +109,7 @@ proc(
   end =:: impl
   impl [] .codeState switch
     Parsing Parsed PreTypeChecking TypeChecking case "proc was not type-checked" ..panic
-    PreCompiled case "invalid proc state" ..panic
+    PreCompiled PreCompiled2 case "invalid proc state" ..panic
     TypeChecked .case break
   end slice.freeze
 end

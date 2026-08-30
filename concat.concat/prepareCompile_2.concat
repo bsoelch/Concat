@@ -9,131 +9,10 @@ common first step for all compiler back-ends:
 "program" import
 "measure" import
 "branchTree" import
+"LIR" import
 using id.IdentifierFlag
-
-## TODO? bit-field/vector-types: BITS32 BITS64 V64 V128 V256
-enum(
-  BOOL
-  I8 I16 I32 I64
-  F16 F32 F64
-  PTR FPTR
-) =:: ValType
-namespace: ValType
-  proc( -> ValType ) =>: I_SIZE
-    ValType .I64
-  end
-  proc( ValType -> i32 ) =>: size
-    switch
-      BOOL case 1 return
-      I8 case 1 return
-      I16 F16 case 2 return
-      I32 F32 case 4 return
-      I64 F64 case 8 return
-      PTR FPTR case 8 return
-    end
-  end
-  proc( ValType -> bool ) =>: isInt
-    switch
-      I8 I16 I32 I64 case true return
-      default false return
-    end
-  end
-  proc( ValType -> bool ) =>: isFloat
-    switch
-      F16 F32 F64 case true return
-      default false return
-    end
-  end
-  proc( ValType -> bool ) =>: isPointer
-    switch
-      PTR FPTR case true return
-      default false return
-    end
-  end
-  proc( ValType ValType -> ValType optional ) =>: mergeUnionElt
-    $1 $1 == if ..drop optional.wrap return end ## values are the same
-    ## TODO? support merge of different sized floats to V<n>F
-    >$ ValType.size >$ ValType.size i32.max switch
-      1 case ValType .I8 optional.wrap return
-      2 case ValType .I16 optional.wrap return
-      4 case ValType .I32 optional.wrap return
-      8 case ValType .I64 optional.wrap return
-      default { } return
-    end
-  end
-  proc( stringBuilder ValType -> stringBuilder ) =>: sbAppend
-    switch
-      BOOL case "bool":s sb.appendStr return
-      I8 case "i8":s sb.appendStr return
-      I16 case "i16":s sb.appendStr return
-      I32 case "i32":s sb.appendStr return
-      I64 case "i64":s sb.appendStr return
-      F16 case "f16":s sb.appendStr return
-      F32 case "f32":s sb.appendStr return
-      F64 case "f64":s sb.appendStr return
-      PTR case "ptr":s sb.appendStr return
-      FPTR case "fptr":s sb.appendStr return
-    end
-  end
-end
-namespace: LIROp
-  ( type : T -> type ) =>: typed
-    ( T : val ValType : valType )
-  end
-  struct(
-    LocalLabelId : label
-    CompareType : cmpType
-    ValType : dataType
-  ) =:: JumpInfo
-  struct(
-    ValType slice : data ## [outArgTypes argTypes] retTypes
-    i32 : argCount
-    i32 : outArgCount
-  ) =:: ProcTypeInfo
-  enum(
-    NEG ADD SUB MUL
-    DIV UDIV REM UREM DIVREM UDIVREM
-    NOT AND OR XOR
-    SHL LSHR ASHR
-  ) =:: Arithmetic
-  union(
-    _ : Nop
-    bool : ConstBool
-    i64 typed : ConstInt
-    f64 typed : ConstFloat
-    ProcId : ConstProcPtr
-    ## TODO const-ref
-    IdentifierInfo typed : GetId
-    IdentifierInfo typed : GetId2
-    IdentifierInfo typed : GetId3
-    IdentifierInfo typed : SetId
-    IdentifierInfo typed : SetId2
-    IdentifierInfo typed : SetId3
-    IdentifierInfo : AtId
-    Arithmetic typed : shadow: Arithmetic
-    CompareType typed : Compare
-    ## TODO: convert
-    ## TODO: load
-    ## TODO: store
-    ## TODO: memcpy, memclear
-    ## TODO: sys (argc,argv,envp)
-    LocalLabelInfo : LocalLabel
-    JumpInfo : LocalJump
-    ProcTypeInfo ptr : StartProc
-    ProcTypeInfo ptr : Call
-    ProcTypeInfo ptr : Return
-    _ : EndProc
-    i32 : Copy
-    i32 : Drop
-    i32 : Rotate
-    i32 : Rotate2
-    i32 : Rotate3
-  ) =:: Data
-end
-struct(
-  LIROp.Data : data
-  FilePosition ptr : pos
-) =:: LIROp
+using LIROp.ValType
+using: ValType LIROp.ValType.
 
 union(
   _ : Empty
@@ -217,6 +96,22 @@ namespace: StackValue
       return
     end
   end
+  proc( stringBuilder StackValue -> stringBuilder ) =>: sbAppend
+    switch
+      Empty case "empty":s sb.appendStr return
+      Reference case "reference":s sb.appendStr return
+      Value .case ValType.sbAppend return
+      Val2 .case ... ## <sb> <0> <1>
+        <<$ ValType.sbAppend
+        >$ ValType.sbAppend
+      return
+      Val3 .case ... >>>$ ## <0> <1> <2> <sb>
+        >>>$ ValType.sbAppend
+        >>$ ValType.sbAppend
+        >$ ValType.sbAppend
+      return
+    end
+  end
 end
 
 struct(
@@ -292,6 +187,12 @@ end
 proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate
   >$ LIROp.Data .Rotate >$ LIROp new
 end
+proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate2
+  >$ LIROp.Data .Rotate2 >$ LIROp new
+end
+proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate3
+  >$ LIROp.Data .Rotate3 >$ LIROp new
+end
 proc( ConstValue #+constVal+# Type #+dataType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConstRef
   "unimplemented: const-references" ..panic
 end
@@ -360,6 +261,9 @@ proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: lirPanic
 end
 proc( LIROp.Arithmetic #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirArithmetic
   <<$ LIROp.Arithmetic LIROp.typed new LIROp.Data .Arithmetic >$ LIROp new
+end
+proc( CompareType #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirCompare
+  <<$ CompareType LIROp.typed new LIROp.Data .Compare >$ LIROp new
 end
 
 proc( LIROp list
@@ -697,6 +601,165 @@ proc( ElementSlotInfo i32 FilePosition ptr : pos ProgramContext ptr.mut : progra
 end
 
 proc(
+  i32 : offset
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> ValType ) =>: popPrimitive
+  context [] .program =:: program
+  context .stack branchTree.peek .and .Reference ? if
+    ## ! need expected type (can be guessed from data-type of built-in)
+    "unimplemented: decay of primitive values" ..panic
+  end
+  context .stack branchTree.pop .else
+    "stack undeflow" sb.copyPtr pos program .errors appendError
+    ValType .BOOL return
+  end [] .Value .else
+    "unsupported argument for builtIn expected primitive got: " sb.copyPtr
+      >$ StackValue.sbAppend
+    pos program .errors appendError
+    ValType .BOOL return
+  end
+end
+
+proc(
+  ValType ValType
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : program
+-> ) =>: checkValTypeEq
+  $1 $1 != if
+    "incompatible arguments for built-in: " sb.copyPtr
+      >$ ValType.sbAppend " and ":s sb.appendStr
+      >$ ValType.sbAppend
+    pos program .errors appendError
+  else ..drop.2 end
+end
+proc(
+  LIROp list
+  LIROp.Arithmetic #+op+#
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileUnaryArithmetic
+  0 pos context popPrimitive <<$
+    $2 pos lirArithmetic list.append
+  context .stack >>$ StackValue .Value branchTree.push
+end
+proc(
+  LIROp list
+  LIROp.Arithmetic #+op+#
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileBinaryArithmetic
+  0 pos context popPrimitive =:: rhs
+  1 pos context popPrimitive =:: lhs
+  lhs rhs pos context [] .program checkValTypeEq
+  lhs pos lirArithmetic list.append
+  context .stack lhs StackValue .Value branchTree.push
+end
+proc(
+  LIROp list
+  CompareType #+op+#
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileBinaryCompare
+  0 pos context popPrimitive =:: rhs
+  1 pos context popPrimitive =:: lhs
+  lhs rhs pos context [] .program checkValTypeEq
+  lhs pos lirCompare list.append
+  context .stack ValType .BOOL StackValue .Value branchTree.push
+end
+proc(
+  LIROp list
+  BuiltIn #+op+#
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileBuiltIn
+  context [] .program =:: program
+  switch
+    ## arithmetic
+    NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 case
+      LIROp.Arithmetic .NEG pos context compileUnaryArithmetic
+    break
+    ADD_I8 ADD_I16 ADD_I32 ADD_I64 ADD_F32 ADD_F64 case
+      LIROp.Arithmetic .ADD pos context compileBinaryArithmetic
+    break
+    SUB_I8 SUB_I16 SUB_I32 SUB_I64 SUB_F32 SUB_F64 case
+      LIROp.Arithmetic .SUB pos context compileBinaryArithmetic
+    break
+    MUL_I32 MUL_I64 MUL_F32 MUL_F64 case
+      LIROp.Arithmetic .MUL pos context compileBinaryArithmetic
+    break
+    DIV_I32 DIV_I64 DIV_F32 DIV_F64 case
+      LIROp.Arithmetic .DIV pos context compileBinaryArithmetic
+    break
+    REM_I32 REM_I64 case
+      LIROp.Arithmetic .REM pos context compileBinaryArithmetic
+    break
+    UDIV_I32 UDIV_I64 case
+      LIROp.Arithmetic .UDIV pos context compileBinaryArithmetic
+    break
+    UMOD_I32 UMOD_I64 case
+      LIROp.Arithmetic .UREM pos context compileBinaryArithmetic
+    break
+    ## TODO: mixed division (? should mixed division be a low-level built-in
+    ## DIV_I64I32 REM_I64I32 UDIV_I64I32 UMOD_I64I32
+    NOT_BOOL case
+      LIROp.Arithmetic .NOT pos context compileUnaryArithmetic
+    break
+    FLIP_I8 FLIP_I16 FLIP_I32 FLIP_I64 case
+      LIROp.Arithmetic .NOT pos context compileUnaryArithmetic
+    break
+    AND_BOOL AND_I8 AND_I16 AND_I32 AND_I64 case
+      LIROp.Arithmetic .AND pos context compileBinaryArithmetic
+    break
+    OR_BOOL OR_I8 OR_I16 OR_I32 OR_I64 case
+      LIROp.Arithmetic .OR pos context compileBinaryArithmetic
+    break
+    XOR_BOOL XOR_I8 XOR_I16 XOR_I32 XOR_I64 case
+      LIROp.Arithmetic .XOR pos context compileBinaryArithmetic
+    break
+    ## LSHR_I8 LSHR_I16 LSHR_I32 LSHR_I64I32 LSHR_I64
+    ## ASHR_I8 ASHR_I16 ASHR_I32 ASHR_I64I32 ASHR_I64
+    ## SHL_I8 SHL_I16 SHL_I32 SHL_I64I32 SHL_I64
+ ## comparison
+    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 case
+      CompareType .EQ pos context compileBinaryCompare
+    break
+    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 case
+      CompareType .NE pos context compileBinaryCompare
+    break
+    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
+      CompareType .LT pos context compileBinaryCompare
+    break
+    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
+      CompareType .LE pos context compileBinaryCompare
+    break
+    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
+      CompareType .GE pos context compileBinaryCompare
+    break
+    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
+      CompareType .GT pos context compileBinaryCompare
+    break
+    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
+      CompareType .ULT pos context compileBinaryCompare
+    break
+    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
+      CompareType .ULE pos context compileBinaryCompare
+    break
+    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
+      CompareType .UGE pos context compileBinaryCompare
+    break
+    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
+      CompareType .UGT pos context compileBinaryCompare
+    break
+    .default
+      "unsupported builtIn: " sb.copyPtr
+        >$ sb.appendBuiltIn
+      pos program .errors appendError
+    break
+  end
+end
+
+proc(
   LIROp list
   Operation : mut: op
   ConverterContext ptr.mut : context
@@ -781,10 +844,8 @@ proc(
       op list.append return
     break
     BuiltIn .case
-      ## TODO: update stack
-      "unimplemented: builtIns" ..panic
-      return
-    break
+      op .pos context compileBuiltIn
+    return
     StackMod .case $ .modType switch
         DROP case
           0
@@ -807,11 +868,25 @@ proc(
           for ..drop
             eltCount op .pos lirCopy list.append ## copy all elements seperately
           end
-        break
-        ROTATE case
-          "unimplemented: rotate" ..panic
-          ## 1. count slots including rotated element
-          ## 2. rotate by +- slotCount(rot-Element) slots
+        return
+        ROTATE case .n
+            $ 0 < =:: flip
+          i32.abs
+          0 =:: mut: eltCount
+          ## count slots above duplicated element
+          context .stack branchTree.itr.start
+            while $1 0 != do
+              branchTree.itr.next [] StackValue.slots eltCount + eltCount=
+            finally >$ 1 - <$ end >$ ..drop ## copy-count
+          branchTree.itr.next [] StackValue.slots >$ ..drop ## itr
+            eltCount $ + flip if -_ end eltCount=
+          switch
+            0 case return
+            1 case eltCount op .pos lirRotate list.append return
+            2 case eltCount op .pos lirRotate2 list.append return
+            3 case eltCount op .pos lirRotate3 list.append return
+            default "unxpected slot-count for value" ..panic
+          end
         break
       end
     break
@@ -1149,6 +1224,14 @@ proc(
       labelInfo op .pos lirLabel list.append
     return
     LocalJump .case =:: jumpInfo
+      jumpInfo .cmpType .NONE ! if
+        ## pop jump condition
+        0 op .pos context popPrimitive $ .BOOL ! if
+          "expected bool got: " sb.copyPtr
+            >$ ValType.sbAppend
+          op .pos errors appendError
+        else ..drop end
+      end
       ## fuse compare+jumpif
       jumpInfo .labelId jumpInfo .cmpType
         $ .TRUE or $ .FALSE if
@@ -1231,7 +1314,7 @@ proc( ProgramContext ptr.mut : program -> ) =>: export: prepareCompile2
       tmpOps@
       impl .variables
       context
-    convertProc ..drop ##impl .codeState .PreCompiled=
+    convertProc impl .codeState .PreCompiled2=
   end
   tmpOps list.free ..drop
   context .stack branchTree.free

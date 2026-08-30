@@ -6068,7 +6068,7 @@ proc(
         expandedAt program .errors appendInfo
       end
       optional.wrap return ## expected
-    TypeChecked PreCompiled case PreOperation slice.mut optional.empty return ## nothing to do
+    TypeChecked PreCompiled PreCompiled2 case PreOperation slice.mut optional.empty return ## nothing to do
     TypeChecking case
       checkType .SKIP_UNDEFINED ! if
         "procedure " sb.copyPtr

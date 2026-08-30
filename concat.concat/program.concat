@@ -7,6 +7,10 @@
 type : export: ProgramContext
 type : export: ProcFlags
 "builtIns" import
+"IR" import
+"LIR" import
+
+type : export: LIROp
 
 enum( COPY ROTATE DROP ) =:: export: StackModType
 struct( i32 : n StackModType : modType ) =:: export: StackModification
@@ -18,31 +22,6 @@ enum( SIGNED NONE UNSIGNED ) =:: export: SignType
 struct( Type : src SignType : signType ) =:: export: CastInfo
 enum( ALIGNMENT SIZE STRIDE NAME ) =:: export: TypeMemoryInfo
 enum( EMPTY RESERVED ) =:: NopType
-i64 =:: export: LocalLabelId
-namespace: LocalLabelId
-  proc( LocalLabelId LocalLabelId -> bool ) : export: alias: eq i64.eq
-  ## fast hash
-  proc( LocalLabelId -> i32 ) =>: export: hash i32 cast.u end
-  ## hash function that reduces collisions in low bits for non-consequtive values
-  proc( LocalLabelId -> i32 ) =>: export: skewHash
-    0
-      >$ i64 cast.u while $ 0 != do =:: x
-        11 * x 0x7 & i32 cast.u +
-      finally x 3 >>> end ..drop
-    return
-  end
-end
-enum( LABEL_START LABEL_END LABEL_MIDDLE HINT_START HINT_END ) =:: export: LocalLabelType
-enum( NONE TRUE FALSE EQ NE LT LE GE GT ULT ULE UGE UGT ) =:: export: CompareType
-{
-  "none":s "true":s "false":s "eq":s "ne":s
-  "lt":s "le":s "ge":s "gt":s
-  "ult":s "ule":s "uge":s "ugt":s
-} =:: CMP_TYPE_NAMES
-struct(
-  LocalLabelId : labelId
-  LocalLabelType : labelType
-) =:: export: LocalLabelInfo
 struct(
   LocalLabelId : labelId
   JumpDistance : jumpDistance
@@ -134,6 +113,7 @@ union( ## code mutable to allow freeing allocation
   Operation slice.mut : TypeChecked
   ## TODO? intermediate states
   Operation slice.mut : PreCompiled
+  LIROp slice.mut : PreCompiled2
 ) =:: export: ProcCodeState
 struct(
   VariableInfo list : variables ## for single implementation in non-generic case
@@ -186,6 +166,7 @@ proc( ProcedureInfo : p -> ) =>: freeProcedure
         impl .genericInfo .ImplInfo ? ! if slice.free end ..drop
       break
       TypeChecked PreCompiled .case slice.free ..drop break
+      PreCompiled2 .case slice.free ..drop break
     end
     impl .genericInfo .Implementations .if
       list.free ..drop
@@ -1009,9 +990,6 @@ namespace: sb
       HINT_END case "hint-end" sb.appendS return
     end
   end
-  proc( stringBuilder CompareType -> stringBuilder ) =>: export: appendCmpType
-    CMP_TYPE_NAMES@ >$ ..tag iSize cast.u [] sb.appendStr
-  end
   proc( stringBuilder PreOperation : op ProgramContext ptr : progContext -> stringBuilder ) =>: export: appendPreOp
     progContext .idContext .typeContext =:: typeContext
     progContext .idContext .typeContext .nameContext =:: nameContext
@@ -1269,7 +1247,7 @@ namespace: sb
       break
       LocalJump .case =:: jumpInfo
         "Jump( " sb.appendS
-        jumpInfo .cmpType sb.appendCmpType
+        jumpInfo .cmpType CompareType.sbAppend
         jumpInfo .cmpType .NONE ! and  jumpInfo .cmpType .TRUE ! and
             jumpInfo .cmpType .FALSE ! if
           ' ' sb.appendC
@@ -1502,6 +1480,9 @@ namespace: sb
         break
         TypeChecked PreCompiled .case
           for prog sb.appendOp end
+        break
+        PreCompiled2 .case
+          for prog LIROp.sbAppend '\n' sb.appendC end
         break
       end
       '\n' sb.appendC

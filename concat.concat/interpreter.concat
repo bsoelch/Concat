@@ -2073,6 +2073,9 @@ namespace: interpreter
           " has not finished type-checking" sb.appendS
         pos errors appendError
         Operation slice.empty break
+      PreCompiled2 case
+        "invalid procedure state" sb.copyPtr pos errors appendError
+      Operation slice.empty break
       TypeChecked PreCompiled .case slice.freeze break
     end =:: code
     code .length 0:iSize == if
