@@ -58,8 +58,7 @@ namespace: id
   0x00040000:IdentifierFlag =:: export: FLAG_IS_READ
   0x00080000:IdentifierFlag =:: export: FLAG_IS_WRITTEN
   0x00100000:IdentifierFlag =:: export: FLAG_HAS_POINTER
-  0x00200000:IdentifierFlag =:: export: FLAG_IS_REFERENCE
-  0x00400000:IdentifierFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
+  0x00200000:IdentifierFlag FLAG_IGNORE_UNUSED | =:: export: FLAG_LIB_FILE ## in library file
   0xfe000000:IdentifierFlag =:: export: MASK_BIT_FIELD ## -64 .. 63
   0x00000000:IdentifierFlag =:: export: BIT_FIELD_NONE
   0x80000000:IdentifierFlag =:: export: BIT_FIELD_ANY

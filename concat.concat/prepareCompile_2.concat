@@ -61,6 +61,20 @@ namespace: ValType
       default { } return
     end
   end
+  proc( stringBuilder ValType -> stringBuilder ) =>: sbAppend
+    switch
+      BOOL case "bool":s sb.appendStr return
+      I8 case "i8":s sb.appendStr return
+      I16 case "i16":s sb.appendStr return
+      I32 case "i32":s sb.appendStr return
+      I64 case "i64":s sb.appendStr return
+      F16 case "f16":s sb.appendStr return
+      F32 case "f32":s sb.appendStr return
+      F64 case "f64":s sb.appendStr return
+      PTR case "ptr":s sb.appendStr return
+      FPTR case "fptr":s sb.appendStr return
+    end
+  end
 end
 namespace: LIROp
   ( type : T -> type ) =>: typed
@@ -71,6 +85,11 @@ namespace: LIROp
     CompareType : cmpType
     ValType : dataType
   ) =:: JumpInfo
+  struct(
+    ValType slice : data ## [outArgTypes argTypes] retTypes
+    i32 : argCount
+    i32 : outArgCount
+  ) =:: ProcTypeInfo
   union(
     _ : Nop
     bool : ConstBool
@@ -88,6 +107,8 @@ namespace: LIROp
     BuiltIn typed : shadow: BuiltIn
     LocalLabelInfo : LocalLabel
     JumpInfo : LocalJump
+    ProcTypeInfo ptr : StartProc
+    ProcTypeInfo ptr : Return
     _ : EndProc
     i32 : Copy
     i32 : Drop
@@ -116,34 +137,74 @@ union(
   ## ( ValType ValType ) : TaggedUnionElement
   ## ( ValType ValType ValType ) : TaggedUnionElement2
 ) =:: StackValue
-proc( StackValue -> i32 ) =>: stackValSlots
-  switch
-    Empty case 0 return
-    Reference Value case 1 return
-    Val2 case 2 return
-    Val3 case 3 return
+namespace: StackValue
+  proc( StackValue -> i32 ) =>: slots
+    switch
+      Empty case 0 return
+      Reference Value case 1 return
+      Val2 case 2 return
+      Val3 case 3 return
+    end
+  end
+  proc( StackValue ValType 4 ptr.mut -> ValType slice ) =>: slotTypes
+    >$ switch
+      Reference Empty case ..drop ValType slice.empty return
+      Value .case $1 0 =[] 1 slice.create return
+      Val2 .case ... ## <s> <0> <1>
+        $2 1 =[]
+        $1 0 =[]
+        2 slice.create
+      return
+      Val3 .case ... ## <s> <0> <1> <2>
+        $3 2 =[]
+        $2 1 =[]
+        $1 0 =[]
+        3 slice.create
+      return
+    end
+  end
+  proc( StackValue StackValue -> StackValue ) =>: unionMerge
+    ## if one of values is reference, return that value
+    ## if one value is empty return the other value
+    $ .Reference ? or $1 .Empty ? if >$ ..drop return end
+    $1 .Reference ? or $ .Empty ? if ..drop return end
+    ## get slots
+    ValType 4 array new =:: mut: slotsA
+    ValType 4 array new =:: mut: slotsB
+    >$ slotsA@ StackValue.slotTypes .length
+    >$ slotsB@ StackValue.slotTypes .length
+    iSize.max $ for
+      slotsA $1 [] slotsB $2 [] ValType.mergeUnionElt .else
+        ..drop.2 StackValue .Reference return
+      end slotsA@ >>$ =[]
+    end switch
+      0 case StackValue .Empty return
+      1 case slotsA 0 [] StackValue .Value return
+      2 case
+        slotsA 0 [] slotsA 1 [] ( ValType ValType ) new
+      StackValue .Val2 return
+      3 case
+        slotsA 0 [] slotsA 1 [] slotsA 2 [] ( ValType ValType ValType ) new
+      StackValue .Val3 return
+      default StackValue .Reference return
+    end
+  end
+  proc( ValType list StackValue -> ValType list ) =>: listAppend
+    switch
+      Empty case return
+      Reference case ValType .PTR list.append return
+      Value .case list.append return
+      Val2 .case ... ## <l> <0> <1>
+        <<$ list.append >$ list.append
+      return
+      Val3 .case ... >>>$ ## <0> <1> <2> <l>
+        >>>$ list.append
+        >>$ list.append
+        >$ list.append
+      return
+    end
   end
 end
-proc( StackValue ValType 4 ptr.mut -> ValType slice ) =>: stackValSlotTypes
-  >$ switch
-    Reference Empty case ..drop ValType slice.empty return
-    Value .case $1 0 =[] 1 slice.create return
-    Val2 .case ... ## <s> <0> <1>
-      $2 1 =[]
-      $1 0 =[]
-      2 slice.create
-    return
-    Val3 .case ... ## <s> <0> <1> <2>
-      $3 2 =[]
-      $2 1 =[]
-      $1 0 =[]
-      3 slice.create
-    return
-  end
-end
-## TODO change PreCompiler to output lower-level IR
-## * only support primitive types and pointers, no composites (except for data-layout and c-call handling)
-## should allow backends to focus on register-allocation
 
 struct(
   ProgramContext ptr.mut : program
@@ -287,7 +348,19 @@ proc( i64 #+constVal+# ValType #+intType+# FilePosition ptr #+pos+# -> LIROp ) =
   <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new 
 end
 proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConst
-  "unimplemented: const-references" ..panic
+  >>$ switch
+    Int .case
+      <<$ lirIntConst
+    return
+    .default
+      "unsupported constant for ValType " sb.copyPtr
+        >>>$ ValType.sbAppend
+        ": ":s sb.appendStr
+        >$ program .idContext .typeContext sb.appendConstant
+      $1 program .errors appendError
+      LIROp.Data .Nop >$ LIROp new ## return nop
+    break
+  end
 end
 proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcPtr
   <$ LIROp.Data .ConstProcPtr >$ LIROp new
@@ -297,6 +370,12 @@ proc( LocalLabelInfo #+labelInfo+# FilePosition ptr #+pos+# -> LIROp ) =>: lirLa
 end
 proc( LocalLabelId #+labelInfo+# CompareType #+cmp+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirJump
   <<<$ LIROp.JumpInfo new LIROp.Data .LocalJump >$ LIROp new
+end
+proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirStartProc
+  <$ LIROp.Data .StartProc >$ LIROp new
+end
+proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirReturn
+  <$ LIROp.Data .Return >$ LIROp new
 end
 proc( FilePosition ptr #+pos+# -> LIROp ) =>: lirEndProc
   LIROp.Data .EndProc >$ LIROp new
@@ -349,8 +428,33 @@ proc( LIROp list
   end
 end
 
-union( Operation list ptr.mut : Call Operation list ptr.mut : CallPtr _ : Impl ) =:: ProcSignatureType
-proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos ConverterContext ptr.mut : context -> Type NameId optional slice ) =>: updateProcType
+## TODO: find good data format for procedure signature
+## need:
+##   * list of stack values passed to procedure
+##   * list of values returned from procedure
+##   * storage locations for reference out-types
+## ? remember corresponding source slot
+struct(
+  ValType slice : inTypes ## outArgs inOutArgs inArgs -- retTypes
+  ValType slice : outTypes
+  i32 : outArgCount
+  i32 : inOutCount
+) =:: ProcCallInfo
+namespace: ProcCallInfo
+  proc( ProcCallInfo ProgramContext ptr.mut : program -> LIROp.ProcTypeInfo ptr ) =>: toProcType
+    program [] .programMemory ## <callInfo> <typeInfo> <memory>
+      LIROp.ProcTypeInfo mixedArena.alloc <$
+      $2 .inTypes .length $3 .outTypes .length + i32 cast.u ValType mixedArena.allocSlice <$
+    program .programMemory=
+    list.wrapSlice list.clear
+      $2 .inTypes list.appendSlice
+      $2 .outTypes list.appendSlice
+    list.asSlice $1 .data=
+    $1 .inTypes .length i32 cast.u $1 .argCount=
+    >$ .outArgCount $1 .outArgCount=
+  end
+end
+proc( LIROp list Type : calledType FilePosition ptr : pos ConverterContext ptr.mut : context -> LIROp list ProcCallInfo ) =>: determineProcType
   context [] .program =:: program
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
@@ -358,165 +462,49 @@ proc( Type : calledType ProcSignatureType : procType FilePosition ptr : pos Conv
   calledType typeContext types.getProcIn .else "proc without in" ..panic end =:: args
   calledType typeContext types.getProcArgNames =:: argNames
   calledType typeContext types.getProcOut .else "proc without out" ..panic end =:: outTypes
-  false =:: mut: needNewArgs
-  false =:: mut: needNewOutTypes
-  ## TODO: reuse lists
-  NameId optional list.empty =:: mut: newArgNames
-  Type list.empty
+  calledType typeContext types.getCallConvention =:: callConvention
+  ## TODO error for non-primitive value in ccall (currently not supported)
+  ## TODO? reuse list
+  0 =:: mut: outArgCount
+  0 =:: mut: inOutCount
+  ValType list.empty
+    outTypes .length for =:: index
+      outTypes index []
+      ## ignore empty ret-values
+      $ typeContext types.isEmpty if
+        ..drop continue
+      end
+      pos program toValTypes .Reference .if ..drop
+        ## TODO? only return reference if it is the last return value
+        ## TODO argument merging for first slot (? first slot of given type)
+        ## TODO prepare slots for reference return values
+        ValType .PTR list.append
+        outArgCount 1 + outArgCount=
+      else StackValue.listAppend end
+    end
+  list.clear ## TODO remember slice of return types in program memory
+    ## pass memory locations for out-args
+    outArgCount for ..drop ValType .PTR list.append end
     args .length for =:: index
       args index [] =:: arg
       ## ignore static and empty arguments
-      arg typeContext types.isEmpty or argNames index slice.get .and .and id.identifierFlags id.FLAG_STATIC & ? if
-        needNewArgs ! if
-          args index slice.head list.appendSlice
-          procType .Impl ? if
-            newArgNames argNames index slice.head list.appendSlice newArgNames=
-          end
-        end
-        true needNewArgs=
+      arg typeContext types.isEmpty or
+          argNames index slice.get .and .and id.identifierFlags id.FLAG_STATIC & ? if
         continue
       end
-      needNewArgs and procType .Impl ? if
-        argNames index slice.get .if newArgNames >$ list.append newArgNames= end
-      end
-      arg typeContext types.isValueType if
-        needNewArgs if arg list.append end
-        continue
-      end
-      needNewArgs ! if
-        args index slice.head list.appendSlice
-        procType .Impl ? if
-          newArgNames argNames index 1 + slice.head list.appendSlice newArgNames=
-        end
-      end
-      true needNewArgs=
-      arg true typeContext types.getAddressType =:: argType
-      argType list.append
-      argNames index slice.get .and .if =:: argName
-        argName id.FLAG_IS_REFERENCE id.addIdentifierFlags
-        argType argName idContext id.getIdData .else "arg has data" ..panic end .valueType=
-      end
+      arg pos program toValTypes StackValue.listAppend
     end
-  =:: mut: newArgs
-  program .nameBuffer [] .length =:: nameOffset
-  Type list.empty
-    outTypes .length for =:: index
-      outTypes index [] =:: outType
-      outType typeContext types.isEmpty if
-        needNewOutTypes ! if outTypes index slice.head list.appendSlice end
-        true needNewOutTypes=
-        continue
-      end
-      outType typeContext types.isValueType and index outTypes .length 1 - == or _BACKEND_ .QBE ! if
-        needNewOutTypes if outType list.append end
-        continue
-      end
-      needNewOutTypes ! if outTypes index slice.head list.appendSlice end
-      true needNewOutTypes=
-      outType true typeContext types.getAddressType =:: outArgType
-      ## TODO merge try mergining location with first or last argument
-      ##  ? merge first n in args with first n out-args if all match (! how to savely handle ( A A -> A A ) [values may be swapped before return needing value data swap] )
-      _BACKEND_ .QBE ! if
-        outArgType list.append
-      end
-      ## TODO! should all out-args be passed before the real proc args (! backend used reveresd arg-order for c-procs)
-      newArgs
-        needNewArgs ! if
-          args list.appendSlice
-          procType .Impl ? if
-            newArgNames
-              argNames list.appendSlice
-            newArgNames=
-          end
-        end
-        procType .Impl ? and $ .length newArgNames .length u> if
-          newArgNames
-            $1 .length $1 .length - for ..drop NameId optional.empty list.append end
-          newArgNames=
-        end
-        true needNewArgs=
-        outArgType list.append
-      newArgs=
-      outType true pos context newTmpVar =:: tmpId
-      procType switch
-        Call CallPtr .case
-          $ []
-            ## opDeclareId
-              outType
-              tmpId
-              pos
-            opDeclareId list.append
-            ## opAtId
-              outType
-              tmpId
-              pos
-            opAtId list.append
-            procType .CallPtr ? if
-              1 StackModType .ROTATE pos opStackMod list.append
-            end
-          >$ =[]
-          tmpId .nameId
-        break
-        Impl case ## don't use newTmpVar to avoid adding to proc-variables twice
-          id.FLAG_NONE pos nameContext id.newTmpIdentifier
-          $ outArgType pos idContext id.declareTmpVar
-          newArgNames
-            $1 optional.wrap list.append
-          newArgNames=
-        break
-      end
-      program [] .nameBuffer
-        index $1 .length - for ..drop NameId optional.empty list.append end
-        >$ optional.wrap list.append
-      program .nameBuffer=
-    end
-  =:: newOutTypes
-  needNewArgs or needNewOutTypes if
-    ## newProcedure
-      needNewArgs if newArgs list.asSlice else args end
-      needNewOutTypes if newOutTypes list.asSlice else outTypes end
-      newArgNames list.asSlice
-      calledType typeContext types.getCallConvention
-    typeContext types.newProcedure
-  else
-    calledType
-  end
-  newArgs list.free ..drop
-  newOutTypes list.free ..drop
-  newArgNames list.free ..drop
-  program [] .nameBuffer
-    $ nameOffset list.tail <$
-    nameOffset list.setLength
-  program .nameBuffer=
+    ## TODO remember slice of argument types in program memory
+  list.free ..drop
+  ## ProcCallInfo
+    ValType slice.empty
+    ValType slice.empty
+    outArgCount
+    inOutCount
+  ProcCallInfo new
 end
 
-proc( StackValue StackValue -> StackValue ) =>: mergeUnionValTypes
-  ## if one of values is reference, return that value
-  ## if one value is empty return the other value
-  $ .Reference ? or $1 .Empty ? if >$ ..drop return end
-  $1 .Reference ? or $ .Empty ? if ..drop return end
-  ## get slots
-  ValType 4 array new =:: mut: slotsA
-  ValType 4 array new =:: mut: slotsB
-  >$ slotsA@ stackValSlotTypes .length
-  >$ slotsB@ stackValSlotTypes .length
-  iSize.max $ for
-    slotsA $1 [] slotsB $2 [] ValType.mergeUnionElt .else
-      ..drop.2 StackValue .Reference return
-    end slotsA@ >>$ =[]
-  end switch
-    0 case StackValue .Empty return
-    1 case slotsA 0 [] StackValue .Value return
-    2 case
-      slotsA 0 [] slotsA 1 [] ( ValType ValType ) new
-    StackValue .Val2 return
-    3 case
-      slotsA 0 [] slotsA 1 [] slotsA 2 [] ( ValType ValType ValType ) new
-    StackValue .Val3 return
-    default StackValue .Reference return
-  end
-end
-proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue ) =>: toValType
+proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue ) =>: toValTypes
   program .errors =:: errors
   program .idContext .typeContext =:: typeContext
   ValType 4 array : mut: eltBuffer
@@ -538,7 +526,7 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
   else $ typeContext types.isTupleLike _if
     eltBuffer@ list.wrapBuffer
       >$ typeContext types.compositeElts for
-        pos program toValType switch
+        pos program toValTypes switch
           Empty case break
           Reference case ..drop StackValue .Reference return
           Value .case
@@ -580,7 +568,7 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
   else $ typeContext types.isUnionLike _if
     StackValue .Empty
       >$ typeContext types.compositeElts for
-        pos program toValType mergeUnionValTypes
+        pos program toValTypes StackValue.unionMerge
       end
     return
   end
@@ -601,7 +589,7 @@ proc(
   context .stack branchTree.peek .else
     "stack-underflow" sb.copyPtr pos errors appendError return
   end [] .Reference ? if
-    expectedType pos program toValType switch
+    expectedType pos program toValTypes switch
       Reference Empty case
         "cannot dereference " sb.copyPtr
           expectedType typeContext sb.appendType
@@ -626,10 +614,10 @@ proc( Type : valType i32 : index FilePosition ptr : pos ProgramContext ptr.mut :
   0
     index 0 != if
       index 1 - for
-        valType >$ typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots +
+        valType >$ typeContext types.compositeGetElement <unwrap> pos program toValTypes StackValue.slots +
       end
     end
-  valType index typeContext types.compositeGetElement <unwrap> pos program toValType stackValSlots
+  valType index typeContext types.compositeGetElement <unwrap> pos program toValTypes StackValue.slots
   ElementSlotInfo new return
 end
 proc( Type : valType NestedElementPath : path FilePosition ptr : pos ProgramContext ptr.mut : program -> ElementSlotInfo  ) =>: findNestedTupleElementSlots
@@ -748,7 +736,7 @@ proc(
   op .val switch
     NOP case return ## ignore no-ops
     Constant .case =:: constVal
-      op .dataType op .pos program toValType
+      op .dataType op .pos program toValTypes
         context .stack $1 branchTree.push
       switch
         Reference case
@@ -820,7 +808,7 @@ proc(
     BuiltIn .case
       ## TODO: update stack
       "unimplemented: builtIns" ..panic
-      op .dataType op .pos program toValType op .pos lirBuiltIn list.append
+      op .dataType op .pos program toValTypes op .pos lirBuiltIn list.append
       return
     break
     StackMod .case $ .modType switch
@@ -828,7 +816,7 @@ proc(
           0
             >$ .n for ..drop
               context .stack branchTree.pop .if
-                [] stackValSlots +
+                [] StackValue.slots +
               end
             end
           op .pos lirDrop list.append
@@ -844,18 +832,12 @@ proc(
     AtId .case =:: idInfo
       "unimplemented: atId" ..panic
       context .stack ValType .PTR StackValue .Value branchTree.push
-        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          idInfo .nameId idContext id.getIdData .else "arg has data" ..panic end .valueType []
-            idInfo op .pos
-          opGetId list.append
-        else
-          op list.append
-        end
+        op list.append
       return
     break
     GetId SetId .case =:: idInfo
       "unimplemented: getId/setId" ..panic
-      op .dataType op .pos program toValType
+      op .dataType op .pos program toValTypes
         op .val .GetId ? if
           context .stack $1 branchTree.push
         else
@@ -872,14 +854,8 @@ proc(
         Val2 Val3 case "unimplemented: get/set multi-value" ..panic
         Reference case break
       end
-        idInfo .nameId id.identifierFlags id.FLAG_IS_REFERENCE & ? if
-          idInfo .nameId
-            idContext id.getIdData .else "arg has data" ..panic end .valueType []
-          idInfo op .pos opGetId list.append
-        else
-          ## TODO? consistent type for atId: always var-type or always address-type?
-          op .dataType idInfo op .pos opAtId list.append
-        end
+        ## TODO? consistent type for atId: always var-type or always address-type?
+        op .dataType idInfo op .pos opAtId list.append
         op .val .SetId ? if
           op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
         end
@@ -888,7 +864,7 @@ proc(
     GetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType op .pos program toValType .Reference ._if ..drop
+      .else op .dataType op .pos program toValTypes .Reference ._if ..drop
         op .dataType
       else ## get by value
         op .dataType typeContext types.isTupleLike if
@@ -951,7 +927,7 @@ proc(
         isPtr ! if
           ## TODO delayed dereferencing of value-types
           ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
-          eltType op .pos program toValType switch
+          eltType op .pos program toValTypes switch
             Empty Reference case break
             Value .case BuiltIn .GET_PTR >$ op .pos lirBuiltIn list.append return
             Val2 Val3 case "unimplemented: multi-dererference" ..panic
@@ -962,7 +938,7 @@ proc(
     SetElement .case =:: index
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType op .pos program toValType .Reference ._if ..drop
+      .else op .dataType op .pos program toValTypes .Reference ._if ..drop
         op .dataType
       else ## set by value
         op .dataType typeContext types.isTupleLike if
@@ -989,7 +965,7 @@ proc(
         end
       index op .pos typeContext applyElementOffset
         ## TODO: extract to procedure "setElementPtr"
-      op .pos program toValType switch
+      op .pos program toValTypes switch
         Empty case return
         Reference case
           "unimplemented: copy-ptr" ..panic
@@ -1003,7 +979,7 @@ proc(
     SetNestedElement .case =:: path
       op .dataType typeContext types.ptrTarget
         $ ? =:: isPtr
-      .else op .dataType op .pos program toValType .Reference ._if ..drop
+      .else op .dataType op .pos program toValTypes .Reference ._if ..drop
         op .dataType
       else ## set by value
         op .dataType typeContext types.isTupleLike if
@@ -1039,7 +1015,7 @@ proc(
             .ops=
           } typeContext op .pos Curry new NestedElementPath.forEach
         $ .ops
-        >$ .eltType op .pos program toValType switch
+        >$ .eltType op .pos program toValTypes switch
           Empty case return
           Reference case
             "unimplemented: copy-ptr" ..panic
@@ -1051,37 +1027,20 @@ proc(
       return
     break
     ImplementProcedure case
-      "unimplemented: ImplementProcedure" ..panic
-      ## 1. split values into slots -> op start proc
-      ## 2. remember slots for out-args (? use low stack slots for out-args)
-      op .dataType ProcSignatureType .Impl op .pos context updateProcType =:: outArgNames
-      outArgNames slice.copy context .outArgNames=
-        $ optional.wrap context .currentProcType=
-      =:: procType
-      procType typeContext types.getProcIn optional.unwrap =:: args
-      args .length i32 cast.u =:: argCount
-      true context .reachable=
-      context [] .variables
-        0:i32 while ..dup argCount < do =:: i
-          procType i typeContext types.getProcArgName .else
-            continue
-          end =:: argName
-          argName id.identifierFlags id.FLAG_STATIC & ? if
-            continue ## TODO? are static args even possible in this context
-          end
-          args i [] =:: argType
-          argType typeContext types.isEmpty if continue end
-          ## VariableInfo
-            argName
-            argType
-            VariableType .ARGUMENT
-          VariableInfo new list.append
-        finally i 1 + end ..drop
-      context .variables=
-        op
-          procType >$ .dataType=
-        list.append
+      op .dataType op .pos context determineProcType
+        $ .outArgCount 0 != if
+          "unimplemented: handle out-args" ..panic
+        end
+        program ProcCallInfo.toProcType op .pos lirStartProc list.append
       return
+    Return case
+      op .dataType op .pos context determineProcType
+        $ .outArgCount 0 != if
+          "unimplemented: handle out-args" ..panic
+        end
+        program ProcCallInfo.toProcType op .pos lirReturn list.append
+      return
+    break
     DeclareId .case =:: idInfo
       "unimplemented: DeclareId" ..panic
       context [] .variables
@@ -1182,7 +1141,7 @@ proc(
       =:: mut: newOps
       calledType newOps@
         op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
-      op .pos context updateProcType =:: outArgNames =:: newProcType
+      op .pos context determineProcType =:: outArgNames =:: newProcType
       newOps =:: shadow: newOps
       newOps
         op
@@ -1210,42 +1169,6 @@ proc(
             end
           end
         end
-      return
-    break
-    Return case
-      "unimplemented: Return" ..panic
-      context .currentProcType [] .else "return outside procedure" ..panic end =:: retType
-      ## TODO? don't return out-args by value independent of back-end
-      ##  ! how to deal with value args mixed with non-value args
-      retType typeContext types.getProcOut .if .length i32 cast.u else 0 end
-        _BACKEND_ .QBE if context .outArgNames [] .length i32 cast.u + end
-      =:: mut: stackValCount
-        context .outArgNames [] for .else
-            continue
-          end =:: retName
-          stackValCount 1 u> if
-            stackValCount 1 - StackModType .ROTATE op .pos opStackMod list.append
-          end
-          retName idContext id.getIdData .else
-            "out-arg has no id-data" ..panic
-          end
-            $ [] .valueType =:: ptrType
-          id.asIdInfo ptrType <$ op .pos opGetId list.append
-          _BACKEND_ .QBE ! if
-            0 StackModType .COPY op .pos opStackMod list.append
-            stackValCount -_ StackModType .ROTATE op .pos opStackMod list.append
-          else
-            stackValCount 1 - stackValCount=
-          end
-          ptrType typeContext types.ptrTarget .else "expected out-arg to be pointer" ..panic end
-            $ typeContext types.isValueType if
-              BuiltIn .SET_PTR
-            else
-              BuiltIn .COPY_PTR
-            end
-          op .pos opBuiltIn list.append
-        end
-        op retType >$ .dataType= list.append
       return
     break
     LocalLabel .case =:: labelInfo
