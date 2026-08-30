@@ -218,12 +218,12 @@ proc( -> ) =>: export: main
       "[thread cound]":s arg.value.setArgName
       "run tests on multiple threads, should be followed by a number specifiying the thread count":s arg.helpText
     threadCountStr@ "-j":s arg.set
-    arg.values
-      "[arg]":s arg.values.setArgName
+    arg.value
+      "[arg]":s arg.value.setArgName
       "add compiler-argument, can occur more than once":s arg.helpText
     CCT_ARGS@ "-cctArg":s arg.collect
-    arg.values
-      "[arg]":s arg.values.setArgName
+    arg.value
+      "[arg]":s arg.value.setArgName
       "add compiler-argument, can occur more than once":s arg.helpText
     CCT_ARGS@ "--cctArg":s arg.collect
     arg.flag
