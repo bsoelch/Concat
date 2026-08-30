@@ -108,6 +108,7 @@ namespace: LIROp
     LocalLabelInfo : LocalLabel
     JumpInfo : LocalJump
     ProcTypeInfo ptr : StartProc
+    ProcTypeInfo ptr : Call
     ProcTypeInfo ptr : Return
     _ : EndProc
     i32 : Copy
@@ -333,24 +334,45 @@ end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
 
 proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirDrop
-  >$ LIROp.Data .Drop >$ LIROp new 
+  >$ LIROp.Data .Drop >$ LIROp new
 end
 proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirCopy
-  >$ LIROp.Data .Copy >$ LIROp new 
+  >$ LIROp.Data .Copy >$ LIROp new
 end
 proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate
-  >$ LIROp.Data .Rotate >$ LIROp new 
+  >$ LIROp.Data .Rotate >$ LIROp new
 end
 proc( ConstValue #+constVal+# Type #+dataType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConstRef
   "unimplemented: const-references" ..panic
 end
+proc( bool #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirBoolConst
+  <$ LIROp.Data .ConstBool >$ LIROp new
+end
 proc( i64 #+constVal+# ValType #+intType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirIntConst
-  <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new 
+  <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new
+end
+proc( f64 #+constVal+# ValType #+floatType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirFloatConst
+  <<$ f64 LIROp.typed new LIROp.Data .ConstFloat >$ LIROp new
+end
+proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcConst
+  <$ LIROp.Data .ConstProcPtr >$ LIROp new
 end
 proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConst
   >>$ switch
+    Bool .case >>$ ..drop
+      <$ lirBoolConst
+    return
+    Char .case i64 cast.u
+      <<$ lirIntConst
+    return
     Int .case
       <<$ lirIntConst
+    return
+    Float .case
+      <<$ lirFloatConst
+    return
+    Procedure .case >>$ ..drop
+      <$ lirProcConst
     return
     .default
       "unsupported constant for ValType " sb.copyPtr
@@ -377,6 +399,9 @@ end
 proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirReturn
   <$ LIROp.Data .Return >$ LIROp new
 end
+proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirCall
+  <$ LIROp.Data .Call >$ LIROp new
+end
 proc( FilePosition ptr #+pos+# -> LIROp ) =>: lirEndProc
   LIROp.Data .EndProc >$ LIROp new
 end
@@ -384,7 +409,7 @@ proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: lirPanic
   "unimplemented: lir-panic" ..panic
 end
 proc( BuiltIn #+builtIn+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirBuiltIn
-  <<$ BuiltIn LIROp.typed new LIROp.Data .BuiltIn >$ LIROp new 
+  <<$ BuiltIn LIROp.typed new LIROp.Data .BuiltIn >$ LIROp new
 end
 
 proc( LIROp list
@@ -821,11 +846,23 @@ proc(
             end
           op .pos lirDrop list.append
         return
-        COPY case
-          "unimplemented: copy" ..panic
+        COPY case .n
+          0 =:: mut: eltCount
+          ## count slots above duplicated eleemnt
+          context .stack branchTree.itr.start
+            while $1 0 != do
+              branchTree.itr.next [] StackValue.slots eltCount + eltCount=
+            finally >$ 1 - <$ end >$ ..drop ## copy-count
+          branchTree.itr.next [] StackValue.slots >$ ..drop ## itr
+            eltCount $ 1 - + eltCount=
+          for ..drop
+            eltCount op .pos lirCopy list.append ## copy all elements seperately
+          end
         break
         ROTATE case
           "unimplemented: rotate" ..panic
+          ## 1. count slots including rotated element
+          ## 2. rotate by +- slotCount(rot-Element) slots
         break
       end
     break
@@ -1041,6 +1078,20 @@ proc(
         program ProcCallInfo.toProcType op .pos lirReturn list.append
       return
     break
+    Call CallPtr case
+      op .val .Call ?? .if
+        op .pos lirProcConst list.append
+      end
+      op .dataType
+        $ typeContext types.getPointerBaseType .if >$ ..drop end
+      op .pos context determineProcType
+        ## TODO? ownership for references passed into function
+        $ .outArgCount 0 != if
+          "unimplemented: handle out-args" ..panic
+        end
+        program ProcCallInfo.toProcType op .pos lirCall list.append
+      return
+    break
     DeclareId .case =:: idInfo
       "unimplemented: DeclareId" ..panic
       context [] .variables
@@ -1133,44 +1184,6 @@ proc(
           "unexpected type for new" ..panic
         end
       return
-    Call CallPtr case
-      "unimplemented: Call" ..panic
-      op .dataType
-        $ typeContext types.getPointerBaseType #+.if+# if >$ ..drop end
-      =:: calledType
-      =:: mut: newOps
-      calledType newOps@
-        op .val .CallPtr ? if ProcSignatureType .CallPtr else ProcSignatureType .Call end
-      op .pos context determineProcType =:: outArgNames =:: newProcType
-      newOps =:: shadow: newOps
-      newOps
-        op
-          newProcType
-            op .dataType typeContext types.isPointer if
-              false typeContext types.getAddressType
-            end
-          >$ .dataType=
-        list.append
-        _BACKEND_ .QBE if
-          newProcType typeContext types.getProcOut .if .length 0 != else false end =:: hasValueRet
-          outArgNames for .else continue end
-            idContext id.getIdData .else "missing id-data for out-arg" ..panic end =:: idData
-            idData [] .valueType
-              idData id.asIdInfo
-              op .pos
-              idData [] .valueType typeContext types.isValueType if
-                opGetId
-              else
-                opAtId
-              end
-            list.append
-            hasValueRet if
-              1 StackModType .ROTATE op .pos opStackMod list.append
-            end
-          end
-        end
-      return
-    break
     LocalLabel .case =:: labelInfo
       labelInfo .labelType switch
         HINT_START HINT_END case
