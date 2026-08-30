@@ -2,6 +2,7 @@
 
 "program" import
 
+## TODO! uncouple operation and type (? make built-ins untyped and use type from procedure)
 enum(
  ## arithmetic
  NEG_I8 NEG_I16 NEG_I32 NEG_I64 NEG_F32 NEG_F64 ## -_

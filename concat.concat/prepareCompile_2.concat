@@ -90,6 +90,12 @@ namespace: LIROp
     i32 : argCount
     i32 : outArgCount
   ) =:: ProcTypeInfo
+  enum(
+    NEG ADD SUB MUL
+    DIV UDIV REM UREM DIVREM UDIVREM
+    NOT AND OR XOR
+    SHL LSHR ASHR
+  ) =:: Arithmetic
   union(
     _ : Nop
     bool : ConstBool
@@ -104,7 +110,13 @@ namespace: LIROp
     IdentifierInfo typed : SetId2
     IdentifierInfo typed : SetId3
     IdentifierInfo : AtId
-    BuiltIn typed : shadow: BuiltIn
+    Arithmetic typed : shadow: Arithmetic
+    CompareType typed : Compare
+    ## TODO: convert
+    ## TODO: load
+    ## TODO: store
+    ## TODO: memcpy, memclear
+    ## TODO: sys (argc,argv,envp)
     LocalLabelInfo : LocalLabel
     JumpInfo : LocalJump
     ProcTypeInfo ptr : StartProc
@@ -243,93 +255,31 @@ proc(
   IdentifierInfo new return
 end
 
-proc( BuiltIn -> bool ) =>: canMergeJumpIf
-  BuiltIn ..length 221 == "no new builtins" assert
+proc( CompareType bool : isFloat -> CompareType ) =>: flipCmpType
   switch
-    NOT_BOOL ## !
-    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 ## ==
-    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 ## !=
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 ## <
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 ## <=
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 ## >=
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 ## >
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64           ## u<
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64           ## u<=
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64           ## u>=
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64           ## u>
-    case true return
-    default false return
+    NONE case CompareType .NONE break
+    TRUE case CompareType .FALSE break
+    FALSE case CompareType .TRUE break
+    EQ case CompareType .NE break
+    NE case CompareType .EQ break
+    LT case isFloat if CompareType .UGE else CompareType .GE end break
+    LE case isFloat if CompareType .UGT else CompareType .GT end break
+    GE case isFloat if CompareType .ULT else CompareType .LT end break
+    GT case isFloat if CompareType .ULE else CompareType .LE end break
+    ULT case isFloat if CompareType .GE else CompareType .UGE end break
+    ULE case isFloat if CompareType .GT else CompareType .UGT end break
+    UGE case isFloat if CompareType .LT else CompareType .ULT end break
+    UGT case isFloat if CompareType .LE else CompareType .ULE end break
   end
 end
-proc( CompareType -> CompareType ) =>: adjustFlippedFloatCmpType
-  switch
-    EQ case CompareType .EQ break
-    NE case CompareType .NE break
-    LT case CompareType .ULT break
-    LE case CompareType .ULE break
-    GE case CompareType .UGE break
-    GT case CompareType .UGT break
-    default "unexpected compare-type for float" ..panic
-  end
-end
-proc( CompareType #+cmpType+# BuiltIn #+builtIn+# -> CompareType ValType ) =>: mergeJumpIf
+proc( CompareType #+prev cmpType+# CompareType LIROp.typed #+cmpOp+# -> CompareType ValType ) =>: mergeJumpIf
   $1 .FALSE or $1 .TRUE end "can only merge cmp.true and cmp.false" assert
   >$ .FALSE =:: flip
-  BuiltIn ..length 221 == "no new builtins" assert
-  $ switch
-    NOT_BOOL case
-      flip if CompareType .TRUE else CompareType .FALSE end
-    break
-    EQ_BOOL EQ_I8 EQ_I16 EQ_I32 EQ_I64 EQ_F32 EQ_F64 case
-      flip if CompareType .NE else CompareType .EQ end
-    break
-    NE_BOOL NE_I8 NE_I16 NE_I32 NE_I64 NE_F32 NE_F64 case
-      flip if CompareType .EQ else CompareType .NE end
-    break
-    LT_I8 LT_I16 LT_I32 LT_I64 LT_F32 LT_F64 case
-      flip if CompareType .GE else CompareType .LT end
-    break
-    LE_I8 LE_I16 LE_I32 LE_I64 LE_F32 LE_F64 case
-      flip if CompareType .GT else CompareType .LE end
-    break
-    GE_I8 GE_I16 GE_I32 GE_I64 GE_F32 GE_F64 case
-      flip if CompareType .LT else CompareType .GE end
-    break
-    GT_I8 GT_I16 GT_I32 GT_I64 GT_F32 GT_F64 case
-      flip if CompareType .LE else CompareType .GT end
-    break
-    ULT_I8 ULT_I16 ULT_I32 ULT_I64 case
-      flip if CompareType .UGE else CompareType .ULT end
-    break
-    ULE_I8 ULE_I16 ULE_I32 ULE_I64 case
-      flip if CompareType .UGT else CompareType .ULE end
-    break
-    UGE_I8 UGE_I16 UGE_I32 UGE_I64 case
-      flip if CompareType .ULT else CompareType .UGE end
-    break
-    UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
-      flip if CompareType .ULE else CompareType .UGT end
-    break
-    default "unsupported built-in for jump-merge" ..panic
-  end
-  >$ switch
-    EQ_BOOL NE_BOOL case ValType .BOOL break
-    EQ_I8 NE_I8 LT_I8 LE_I8 GE_I8 GT_I8 ULT_I8 ULE_I8 UGE_I8 UGT_I8 case
-      ValType .I8 break
-    EQ_I16 NE_I16 LT_I16 LE_I16 GE_I16 GT_I16 ULT_I16 ULE_I16 UGE_I16 UGT_I16 case
-      ValType .I16 break
-    EQ_I32 NE_I32 LT_I32 LE_I32 GE_I32 GT_I32 ULT_I32 ULE_I32 UGE_I32 UGT_I32 case
-      ValType .I32 break
-    EQ_I64 NE_I64 LT_I64 LE_I64 GE_I64 GT_I64 ULT_I64 ULE_I64 UGE_I64 UGT_I64 case
-      ValType .I64 break
-    EQ_F32 NE_F32 LT_F32 LE_F32 GE_F32 GT_F32 case
-      flip if adjustFlippedFloatCmpType end
-      ValType .F32 break
-    EQ_F64 NE_F64 LT_F64 LE_F64 GE_F64 GT_F64 case
-      flip if adjustFlippedFloatCmpType end
-      ValType .F64 break
-    default "unsupported built-in for jump-merge" ..panic
-  end
+  $ .val
+    flip if
+      $1 .valType ValType.isFloat flipCmpType
+    end
+  >$ .valType
 end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
 
@@ -408,8 +358,8 @@ end
 proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: lirPanic
   "unimplemented: lir-panic" ..panic
 end
-proc( BuiltIn #+builtIn+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirBuiltIn
-  <<$ BuiltIn LIROp.typed new LIROp.Data .BuiltIn >$ LIROp new
+proc( LIROp.Arithmetic #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirArithmetic
+  <<$ LIROp.Arithmetic LIROp.typed new LIROp.Data .Arithmetic >$ LIROp new
 end
 
 proc( LIROp list
@@ -418,14 +368,14 @@ proc( LIROp list
 -> LIROp list ) =>: offsetPointer
   offset 0 == if return end ## no offset -> no change
   ## merge chained (constant) pointer offset
-  $ list.peek .and .data .BuiltIn .and .val [] .OFFSET_PTR and
+  $ list.peek .and .data .Arithmetic .and .val [] .ADD and
       $ $ .length 2 - list.at .and .data .ConstInt .if .val [] =:: prev_offset
     $ .length 2 - list.setLength ## discard previous operations
     offset prev_offset +
   else
     offset
   end ValType.I_SIZE pos lirIntConst list.append
-  BuiltIn .OFFSET_PTR ValType.I_SIZE pos lirBuiltIn list.append
+  LIROp.Arithmetic .ADD ValType.I_SIZE pos lirArithmetic list.append
 end
 proc( LIROp list
   Type : refBase
@@ -833,7 +783,6 @@ proc(
     BuiltIn .case
       ## TODO: update stack
       "unimplemented: builtIns" ..panic
-      op .dataType op .pos program toValTypes op .pos lirBuiltIn list.append
       return
     break
     StackMod .case $ .modType switch
@@ -966,7 +915,7 @@ proc(
           ## -> keep using pointer ops for element-access, deref on copy/branch/built-in
           eltType op .pos program toValTypes switch
             Empty Reference case break
-            Value .case BuiltIn .GET_PTR >$ op .pos lirBuiltIn list.append return
+            Value .case "unimplemented: load" ..panic
             Val2 Val3 case "unimplemented: multi-dererference" ..panic
           end
         end
@@ -1008,7 +957,7 @@ proc(
           "unimplemented: copy-ptr" ..panic
           ##BuiltIn .COPY_PTR op .pos lirBuiltIn list.append
         return
-        Value .case BuiltIn .SET_PTR >$ op .pos lirBuiltIn list.append return
+        Value .case "unimplemented: store" ..panic
         Val2 Val3 case "unimplemented: multi-value setPtrElement" ..panic
       end
       return
@@ -1058,7 +1007,7 @@ proc(
             "unimplemented: copy-ptr" ..panic
             ##BuiltIn .COPY_PTR op .pos lirBuiltIn list.append
           return
-          Value .case BuiltIn .SET_PTR >$ op .pos lirBuiltIn list.append return
+          Value .case "unimplemented: store" ..panic
           Val2 Val3 case "unimplemented: multi-value setPtrElement" ..panic
         end
       return
@@ -1188,7 +1137,7 @@ proc(
       labelInfo .labelType switch
         HINT_START HINT_END case
           ## move mergable operation after start hint
-          $ list.peek .and .data .BuiltIn .and .val [] canMergeJumpIf if
+          $ list.peek .and .data .Compare ? if
             list.pop optional.unwrap =:: tmp
             labelInfo op .pos lirLabel list.append
             tmp list.append
@@ -1203,12 +1152,12 @@ proc(
       ## fuse compare+jumpif
       jumpInfo .labelId jumpInfo .cmpType
         $ .TRUE or $ .FALSE if
-          $2 list.peek .and .data .BuiltIn .and .val [] .NOT_BOOL if
+          $2 list.peek .and .data .Arithmetic .and $ .val [] .NOT >$ .valType [] .BOOL & if
             >>$ list.pop ..drop <<$
             .TRUE if CompareType .FALSE else CompareType .TRUE end ValType .BOOL
-          else _BACKEND_ .ASM and $2 list.peek .and .data .BuiltIn .and .val [] canMergeJumpIf _if
-            >>$ list.pop .and .data .BuiltIn .if .val else ..unreachable end
-            >$ <<<$ ## jmpDst cmpType list builtIn -- list jmpDst cmpType builtIn
+          else _BACKEND_ .ASM and $2 list.peek .and .data .Compare ? _if
+            >>$ list.pop .and .data .Compare .else ..unreachable end
+            >$ <<<$ ## jmpDst cmpType list cmpOp -- list jmpDst cmpType cmpOp
             mergeJumpIf
           else ValType .BOOL end
         else ValType .BOOL end op .pos lirJump list.append
