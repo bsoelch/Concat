@@ -13,6 +13,7 @@ common first step for all compiler back-ends:
 using id.IdentifierFlag
 using LIROp.ValType
 using: ValType LIROp.ValType.
+using LIROp.new.
 
 union(
   _ : Empty
@@ -177,94 +178,6 @@ proc( CompareType #+prev cmpType+# CompareType LIROp.typed #+cmpOp+# -> CompareT
   >$ .valType
 end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`
-
-proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirDrop
-  >$ LIROp.Data .Drop >$ LIROp new
-end
-proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirCopy
-  >$ LIROp.Data .Copy >$ LIROp new
-end
-proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate
-  >$ LIROp.Data .Rotate >$ LIROp new
-end
-proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate2
-  >$ LIROp.Data .Rotate2 >$ LIROp new
-end
-proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: lirRotate3
-  >$ LIROp.Data .Rotate3 >$ LIROp new
-end
-proc( ConstValue #+constVal+# Type #+dataType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConstRef
-  "unimplemented: const-references" ..panic
-end
-proc( bool #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirBoolConst
-  <$ LIROp.Data .ConstBool >$ LIROp new
-end
-proc( i64 #+constVal+# ValType #+intType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirIntConst
-  <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new
-end
-proc( f64 #+constVal+# ValType #+floatType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirFloatConst
-  <<$ f64 LIROp.typed new LIROp.Data .ConstFloat >$ LIROp new
-end
-proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcConst
-  <$ LIROp.Data .ConstProcPtr >$ LIROp new
-end
-proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: lirConst
-  >>$ switch
-    Bool .case >>$ ..drop
-      <$ lirBoolConst
-    return
-    Char .case i64 cast.u
-      <<$ lirIntConst
-    return
-    Int .case
-      <<$ lirIntConst
-    return
-    Float .case
-      <<$ lirFloatConst
-    return
-    Procedure .case >>$ ..drop
-      <$ lirProcConst
-    return
-    .default
-      "unsupported constant for ValType " sb.copyPtr
-        >>>$ ValType.sbAppend
-        ": ":s sb.appendStr
-        >$ program .idContext .typeContext sb.appendConstant
-      $1 program .errors appendError
-      LIROp.Data .Nop >$ LIROp new ## return nop
-    break
-  end
-end
-proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: lirProcPtr
-  <$ LIROp.Data .ConstProcPtr >$ LIROp new
-end
-proc( LocalLabelInfo #+labelInfo+# FilePosition ptr #+pos+# -> LIROp ) =>: lirLabel
-  >$ LIROp.Data .LocalLabel >$ LIROp new
-end
-proc( LocalLabelId #+labelInfo+# CompareType #+cmp+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirJump
-  <<<$ LIROp.JumpInfo new LIROp.Data .LocalJump >$ LIROp new
-end
-proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirStartProc
-  <$ LIROp.Data .StartProc >$ LIROp new
-end
-proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirReturn
-  <$ LIROp.Data .Return >$ LIROp new
-end
-proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: lirCall
-  <$ LIROp.Data .Call >$ LIROp new
-end
-proc( FilePosition ptr #+pos+# -> LIROp ) =>: lirEndProc
-  LIROp.Data .EndProc >$ LIROp new
-end
-proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: lirPanic
-  "unimplemented: lir-panic" ..panic
-end
-proc( LIROp.Arithmetic #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirArithmetic
-  <<$ LIROp.Arithmetic LIROp.typed new LIROp.Data .Arithmetic >$ LIROp new
-end
-proc( CompareType #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: lirCompare
-  <<$ CompareType LIROp.typed new LIROp.Data .Compare >$ LIROp new
-end
 
 proc( LIROp list
   i64 : offset
@@ -1094,7 +1007,7 @@ proc(
         $ .outArgCount 0 != if
           "unimplemented: handle out-args" ..panic
         end
-        program ProcCallInfo.toProcType op .pos lirStartProc list.append
+        program ProcCallInfo.toProcType op .pos lirBeginProc list.append
         op .dataType typeContext types.getProcIn <unwrap> for
           context .stack >$ op .pos program toValTypes branchTree.push
         end

@@ -134,7 +134,7 @@ namespace: LIROp
     ## TODO: sys (argc,argv,envp)
     LocalLabelInfo : LocalLabel
     JumpInfo : LocalJump
-    ProcTypeInfo ptr : StartProc
+    ProcTypeInfo ptr : BeginProc
     ProcTypeInfo ptr : Call
     ProcTypeInfo ptr : Return
     _ : EndProc
@@ -152,6 +152,95 @@ struct(
 
 "program" import
 
+namespace: LIROp.new
+  proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirDrop
+    >$ LIROp.Data .Drop >$ LIROp new
+  end
+  proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirCopy
+    >$ LIROp.Data .Copy >$ LIROp new
+  end
+  proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirRotate
+    >$ LIROp.Data .Rotate >$ LIROp new
+  end
+  proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirRotate2
+    >$ LIROp.Data .Rotate2 >$ LIROp new
+  end
+  proc( i32 #+count+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirRotate3
+    >$ LIROp.Data .Rotate3 >$ LIROp new
+  end
+  proc( ConstValue #+constVal+# Type #+dataType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: export: lirConstRef
+    "unimplemented: const-references" ..panic
+  end
+  proc( bool #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirBoolConst
+    <$ LIROp.Data .ConstBool >$ LIROp new
+  end
+  proc( i64 #+constVal+# ValType #+intType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirIntConst
+    <<$ i64 LIROp.typed new LIROp.Data .ConstInt >$ LIROp new
+  end
+  proc( f64 #+constVal+# ValType #+floatType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirFloatConst
+    <<$ f64 LIROp.typed new LIROp.Data .ConstFloat >$ LIROp new
+  end
+  proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirProcConst
+    <$ LIROp.Data .ConstProcPtr >$ LIROp new
+  end
+  proc( ConstValue #+constVal+# ValType #+valType+# FilePosition ptr #+pos+# ProgramContext ptr.mut : program -> LIROp ) =>: export: lirConst
+    >>$ switch
+      Bool .case >>$ ..drop
+        <$ lirBoolConst
+      return
+      Char .case i64 cast.u
+        <<$ lirIntConst
+      return
+      Int .case
+        <<$ lirIntConst
+      return
+      Float .case
+        <<$ lirFloatConst
+      return
+      Procedure .case >>$ ..drop
+        <$ lirProcConst
+      return
+      .default
+        "unsupported constant for ValType " sb.copyPtr
+          >>>$ ValType.sbAppend
+          ": ":s sb.appendStr
+          >$ program .idContext .typeContext sb.appendConstant
+        $1 program .errors appendError
+        LIROp.Data .Nop >$ LIROp new ## return nop
+      break
+    end
+  end
+  proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirProcPtr
+    <$ LIROp.Data .ConstProcPtr >$ LIROp new
+  end
+  proc( LocalLabelInfo #+labelInfo+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirLabel
+    >$ LIROp.Data .LocalLabel >$ LIROp new
+  end
+  proc( LocalLabelId #+labelInfo+# CompareType #+cmp+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirJump
+    <<<$ LIROp.JumpInfo new LIROp.Data .LocalJump >$ LIROp new
+  end
+  proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: export: lirBeginProc
+    <$ LIROp.Data .BeginProc >$ LIROp new
+  end
+  proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: export: lirReturn
+    <$ LIROp.Data .Return >$ LIROp new
+  end
+  proc( LIROp.ProcTypeInfo ptr FilePosition ptr #+pos+# -> LIROp ) =>: export: lirCall
+    <$ LIROp.Data .Call >$ LIROp new
+  end
+  proc( FilePosition ptr #+pos+# -> LIROp ) =>: export: lirEndProc
+    LIROp.Data .EndProc >$ LIROp new
+  end
+  proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirPanic
+    "unimplemented: lir-panic" ..panic
+  end
+  proc( LIROp.Arithmetic #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirArithmetic
+    <<$ LIROp.Arithmetic LIROp.typed new LIROp.Data .Arithmetic >$ LIROp new
+  end
+  proc( CompareType #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirCompare
+    <<$ CompareType LIROp.typed new LIROp.Data .Compare >$ LIROp new
+  end
+end
 namespace: LIROp
   proc( type : auto: T stringBuilder T typed string -> stringBuilder T ) =>: prepareSbAppendTyped
     >>$ >$ sb.appendStr $1 .valType ValType.sbAppend ": ":s sb.appendStr >$ .val
@@ -200,8 +289,8 @@ namespace: LIROp
            ": ":s sb.appendStr
         >$ .labelId i64 cast.u sb.appendI
       break
-      StartProc .case
-        <$ "start proc: ":s sb.appendStr >$ [] ProcTypeInfo.sbAppend
+      BeginProc .case
+        <$ "begin proc: ":s sb.appendStr >$ [] ProcTypeInfo.sbAppend
       break
       Call .case
         <$ "call: ":s sb.appendStr >$ [] ProcTypeInfo.sbAppend
