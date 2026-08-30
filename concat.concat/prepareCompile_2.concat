@@ -314,8 +314,8 @@ end
 ##   * storage locations for reference out-types
 ## ? remember corresponding source slot
 struct(
-  ValType slice : inTypes ## outArgs inOutArgs inArgs -- retTypes
-  ValType slice : outTypes
+  ValType slice : data ## outArgs inOutArgs inArgs -- retTypes
+  i32 : argCount
   i32 : outArgCount
   i32 : inOutCount
 ) =:: ProcCallInfo
@@ -323,13 +323,9 @@ namespace: ProcCallInfo
   proc( ProcCallInfo ProgramContext ptr.mut : program -> LIROp.ProcTypeInfo ptr ) =>: toProcType
     program [] .programMemory ## <callInfo> <typeInfo> <memory>
       LIROp.ProcTypeInfo mixedArena.alloc <$
-      $2 .inTypes .length $3 .outTypes .length + i32 cast.u ValType mixedArena.allocSlice <$
     program .programMemory=
-    list.wrapSlice list.clear
-      $2 .inTypes list.appendSlice
-      $2 .outTypes list.appendSlice
-    list.asSlice $1 .data=
-    $1 .inTypes .length i32 cast.u $1 .argCount=
+    $1 .data $1 .data=
+    $1 .argCount $1 .argCount=
     >$ .outArgCount $1 .outArgCount=
   end
 end
@@ -361,7 +357,7 @@ proc( LIROp list Type : calledType FilePosition ptr : pos ConverterContext ptr.m
         outArgCount 1 + outArgCount=
       else StackValue.listAppend end
     end
-  list.clear ## TODO remember slice of return types in program memory
+    $ .length =:: retCount
     ## pass memory locations for out-args
     outArgCount for ..drop ValType .PTR list.append end
     args .length for =:: index
@@ -373,11 +369,17 @@ proc( LIROp list Type : calledType FilePosition ptr : pos ConverterContext ptr.m
       end
       arg pos program toValTypes StackValue.listAppend
     end
-    ## TODO remember slice of argument types in program memory
+    program [] .programMemory
+      $1 .length i32 cast.u ValType mixedArena.allocSlice <$
+    program .programMemory=
+    list.wrapSlice list.clear
+      $1 list.asSlice retCount slice.cutIndex >>$ ## tmpList retType argTypes dstList
+      >$ list.appendSlice
+      >$ list.appendSlice
+    list.asSlice <$
   list.free ..drop
   ## ProcCallInfo
-    ValType slice.empty
-    ValType slice.empty
+    $ .length retCount - i32 cast.u
     outArgCount
     inOutCount
   ProcCallInfo new
@@ -628,7 +630,7 @@ proc(
 -> ) =>: checkValTypeEq
   $1 $1 != if
     "incompatible arguments for built-in: " sb.copyPtr
-      >$ ValType.sbAppend " and ":s sb.appendStr
+      >>$ ValType.sbAppend " and ":s sb.appendStr
       >$ ValType.sbAppend
     pos program .errors appendError
   else ..drop.2 end
@@ -864,7 +866,7 @@ proc(
               branchTree.itr.next [] StackValue.slots eltCount + eltCount=
             finally >$ 1 - <$ end >$ ..drop ## copy-count
           branchTree.itr.next [] StackValue.slots >$ ..drop ## itr
-            eltCount $ 1 - + eltCount=
+            eltCount $1 1 - + eltCount=
           for ..drop
             eltCount op .pos lirCopy list.append ## copy all elements seperately
           end
@@ -879,7 +881,7 @@ proc(
               branchTree.itr.next [] StackValue.slots eltCount + eltCount=
             finally >$ 1 - <$ end >$ ..drop ## copy-count
           branchTree.itr.next [] StackValue.slots >$ ..drop ## itr
-            eltCount $ + flip if -_ end eltCount=
+            eltCount $1 + 1 - flip if -_ end eltCount=
           switch
             0 case return
             1 case eltCount op .pos lirRotate list.append return
@@ -1093,6 +1095,9 @@ proc(
           "unimplemented: handle out-args" ..panic
         end
         program ProcCallInfo.toProcType op .pos lirStartProc list.append
+        op .dataType typeContext types.getProcIn <unwrap> for
+          context .stack >$ op .pos program toValTypes branchTree.push
+        end
       return
     Return case
       op .dataType op .pos context determineProcType
@@ -1100,6 +1105,7 @@ proc(
           "unimplemented: handle out-args" ..panic
         end
         program ProcCallInfo.toProcType op .pos lirReturn list.append
+        ## TODO? verify return types
       return
     break
     Call CallPtr case
@@ -1109,11 +1115,12 @@ proc(
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
       op .pos context determineProcType
-        ## TODO? ownership for references passed into function
+        ## TODO! (verify and) pop arguments
         $ .outArgCount 0 != if
           "unimplemented: handle out-args" ..panic
         end
         program ProcCallInfo.toProcType op .pos lirCall list.append
+        ## TODO! push return values
       return
     break
     DeclareId .case =:: idInfo
