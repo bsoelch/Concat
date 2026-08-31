@@ -675,6 +675,39 @@ end
 
 proc(
   LIROp list
+  SignType : signType
+  Type : src
+  Type : dst
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileCast
+  context [] .program =:: program
+  program .errors =:: errors
+  program .idContext =:: idContext
+  idContext .constContext =:: constContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  src typeContext types.unwrapNamed =:: shadow: src
+  dst typeContext types.unwrapNamed =:: shadow: dst
+  src dst types.typeEquals if return end
+  src typeContext types.isPointer and dst typeContext types.isPointer if
+    ## TODO? check val-type equality instead of looking at data-types
+    src typeContext types.isCallable dst typeContext types.isCallable != if
+      "conversion between code and data pointer" ..panic
+    end
+    return
+  end
+  src typeContext types.isIntOrPointer and dst typeContext types.isIntOrPointer if
+    ## TODO: int <-> int
+    ## 1. transmute [pointer -> iSize] 2. cast [int<->int] 3. transmute [iSize -> pointer]
+  end
+  ## TODO: float <-> float
+  ## TODO: int <-> float
+  "unimplemented: cast" ..panic
+end
+
+proc(
+  LIROp list
   Operation : mut: op
   ConverterContext ptr.mut : context
 -> LIROp list ) =>: compileOp
@@ -746,9 +779,19 @@ proc(
       context .stack ValType .FPTR StackValue .Value branchTree.push
       op .pos lirProcPtr list.append return
     break
-    AutoCast Cast Cast! BitCast case ## unary operation
-      ## TODO! convert casts to LIR
-      "unimplemented: casts" ..panic
+    Cast .case
+      $ .signType >$ .src op .dataType op .pos context compileCast
+    return
+    Cast! .case
+      SignType .NONE >$ op .dataType op .pos context compileCast
+    return
+    AutoCast .case
+      ## TODO: add rotations to ensure cast value is on top of stack
+      ##  1. rotate 2. remember op-count 3. cast 4. if op-count > old-op-count: rotate back else remove rotate
+      SignType .NONE >$ .src op .dataType op .pos context compileCast
+    return
+    BitCast case
+      "unimplemented: BitCast" ..panic
       op list.append return
     break
     Switch case
