@@ -111,6 +111,22 @@ namespace: LIROp
       NAMES >$ ..tag iSize cast.u [] sb.appendStr
     end
   end
+  struct( i32 : size i8 : alignment ) =:: export: MemorySize
+  namespace: MemorySize
+    proc( Type TypeContext ptr.mut : context -> MemorySize optional ) =>: export: fromType
+      $ context types.sizeOf .Fixed .else ..drop.2 { } return end i32 cast.u
+      >$ context types.alignOf .Fixed .else ..drop.2 { } return end i32 cast.u i32.highestSetBit i8 cast.u
+      MemorySize new optional.wrap return
+    end
+    proc( stringBuilder MemorySize -> stringBuilder ) =>: sbAppend
+      <$ $1 .alignment
+        $ 1 u> if
+          <$ "align ":s sb.appendStr
+          1 >>$ i32 cast.u << i32.sbAppend ' ' sb.appendC
+        else ..drop end
+      >$ .size i32.sbAppend
+    end
+  end
   union(
     _ : Nop
     bool : ConstBool
@@ -118,19 +134,21 @@ namespace: LIROp
     f64 typed : ConstFloat
     ProcId : ConstProcPtr
     ## TODO const-ref
-    IdentifierInfo typed : GetId
-    IdentifierInfo typed : GetId2
-    IdentifierInfo typed : GetId3
-    IdentifierInfo typed : SetId
-    IdentifierInfo typed : SetId2
-    IdentifierInfo typed : SetId3
-    IdentifierInfo : AtId
+    NameId : DeclareLocal ## TODO? should declared type/memory-size be stored with id
+    NameId typed : GetLocal
+    NameId typed : GetLocal2
+    NameId typed : GetLocal3
+    NameId typed : SetLocal
+    NameId typed : SetLocal2
+    NameId typed : SetLocal3
+    NameId : AtLocal
     Arithmetic typed : shadow: Arithmetic
     CompareType typed : Compare
     ## TODO: convert
     ## TODO: load
     ## TODO: store
-    ## TODO: memcpy, memclear
+    MemorySize : MemCopy
+    ## TODO: memclear
     ## TODO: sys (argc,argv,envp)
     LocalLabelInfo : LocalLabel
     JumpInfo : LocalJump
@@ -213,6 +231,33 @@ namespace: LIROp.new
   proc( ProcId #+constVal+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirProcPtr
     <$ LIROp.Data .ConstProcPtr >$ LIROp new
   end
+  proc( NameId #+varName+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirDeclare
+    >$ LIROp.Data .DeclareLocal >$ LIROp new
+  end
+  proc( NameId #+varName+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirAtLocal
+    >$ LIROp.Data .AtLocal >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirGetLocal
+    <<$ NameId LIROp.typed new LIROp.Data .GetLocal >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirGetLocal2
+    <<$ NameId LIROp.typed new LIROp.Data .GetLocal2 >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirGetLocal3
+    <<$ NameId LIROp.typed new LIROp.Data .GetLocal3 >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirSetLocal
+    <<$ NameId LIROp.typed new LIROp.Data .SetLocal >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirSetLocal2
+    <<$ NameId LIROp.typed new LIROp.Data .SetLocal2 >$ LIROp new
+  end
+  proc( NameId #+varName+# ValType #+valType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirSetLocal3
+    <<$ NameId LIROp.typed new LIROp.Data .SetLocal3 >$ LIROp new
+  end
+  proc( MemorySize #+size+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirMemCopy
+    >$ LIROp.Data .MemCopy >$ LIROp new
+  end
   proc( LocalLabelInfo #+labelInfo+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirLabel
     >$ LIROp.Data .LocalLabel >$ LIROp new
   end
@@ -245,8 +290,11 @@ namespace: LIROp
   proc( type : auto: T stringBuilder T typed string -> stringBuilder T ) =>: prepareSbAppendTyped
     >>$ >$ sb.appendStr $1 .valType ValType.sbAppend ": ":s sb.appendStr >$ .val
   end
-  proc( stringBuilder IdentifierInfo typed string NameContext ptr : nameContext -> stringBuilder ) =>: sbAppendIdInfo
-    prepareSbAppendTyped nameContext sb.appendIdInfo
+  proc( stringBuilder NameId typed string NameContext ptr : nameContext -> stringBuilder ) =>: sbAppendLocal
+    prepareSbAppendTyped nameContext sb.appendIdentifierPath
+  end
+  proc( stringBuilder NameId : name string NameContext ptr : nameContext -> stringBuilder ) =>: sbAppendName
+    sb.appendStr name nameContext sb.appendIdentifierPath
   end
   proc( stringBuilder LIROp ProgramContext ptr : program -> stringBuilder ) =>: export: sbAppend
     program .idContext .typeContext .nameContext =:: nameContext
@@ -256,16 +304,18 @@ namespace: LIROp
       ConstInt .case "const ":s prepareSbAppendTyped i64.sbAppend break
       ConstFloat .case "const ":s prepareSbAppendTyped f64.sbAppend break
       ConstProcPtr .case
-        <$ "const proc: ":s sb.appendStr >$ ProcId.getProcInfo [] .nameId nameContext sb.appendIdentifierPath
+        ProcId.getProcInfo [] .nameId "const proc: ":s nameContext sbAppendName
       break
-      GetId .case "get ":s nameContext sbAppendIdInfo break
-      GetId2 .case "get2 ":s nameContext sbAppendIdInfo break
-      GetId3 .case "get3 ":s nameContext sbAppendIdInfo break
-      SetId .case "set ":s nameContext sbAppendIdInfo break
-      SetId2 .case "set2 ":s nameContext sbAppendIdInfo break
-      SetId3 .case "set3 ":s nameContext sbAppendIdInfo break
-      AtId .case
-        <$ "at: ":s sb.appendStr >$ nameContext sb.appendIdInfo
+      DeclareLocal .case "declare local: ":s nameContext sbAppendName break
+      GetLocal .case "get local ":s nameContext sbAppendLocal break
+      GetLocal2 .case "get local 2 ":s nameContext sbAppendLocal break
+      GetLocal3 .case "get local 3 ":s nameContext sbAppendLocal break
+      SetLocal .case "set local ":s nameContext sbAppendLocal break
+      SetLocal2 .case "set2 local ":s nameContext sbAppendLocal break
+      SetLocal3 .case "set3 local ":s nameContext sbAppendLocal break
+      AtLocal .case "at local: ":s nameContext sbAppendName break
+      MemCopy .case
+        <$ "memcopy: ":s sb.appendStr >$ MemorySize.sbAppend
       break
       Arithmetic .case
         "arithmetic ":s prepareSbAppendTyped Arithmetic.sbAppend

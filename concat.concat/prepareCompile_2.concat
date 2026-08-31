@@ -384,10 +384,9 @@ proc(
     "stack-underflow" sb.copyPtr pos errors appendError return
   end [] .Reference ? if
     expectedType pos program toValTypes switch
-      Reference Empty case
-        "cannot dereference " sb.copyPtr
-          expectedType typeContext sb.appendType
-        pos errors appendError return
+      Reference case return ## nothing to do
+      Empty case
+        "unimplemented: deref val0" ..panic ## -> generate drop operation
       break
       Value .case
         "unimplemented: deref" ..panic
@@ -811,8 +810,7 @@ proc(
         op list.append
       return
     break
-    GetId SetId .case =:: idInfo
-      "unimplemented: getId/setId" ..panic
+    GetId SetId .case .nameId
       op .dataType op .pos program toValTypes
         op .val .GetId ? if
           context .stack $1 branchTree.push
@@ -823,17 +821,46 @@ proc(
           end
         end
       switch
-        Empty case return
-        Value .case ..drop
-          op list.append ## element access on value-type
+        Empty case ..drop return
+        Value .case
+          op .pos op .val .GetId ? if
+            lirGetLocal
+          else
+            lirSetLocal
+          end list.append ## element access on value-type
         return
-        Val2 Val3 case "unimplemented: get/set multi-value" ..panic
+        Val2 .case ... ## <elts> <name> <0> <1>
+          op .val .GetId ? if
+            $2 >>$ op .pos lirGetLocal ## <elts> <name> <1> <get0>
+            >>>$ >$ list.append <<$ ## <elts> <name> <1>
+            op .pos lirGetLocal2 list.append
+          else ## <elts> <name> <0> <1>
+            $2 >$ op .pos lirSetLocal2 ## <elts> <name> <0> <set1>
+            >>>$ >$ list.append <<$ ## <elts> <name> <0>
+            op .pos lirSetLocal list.append
+          end
+        return
+        Val3 .case ... ## <elts> <name> <0> <1> <2>
+          op .val .GetId ? if
+            $3 >>>$ op .pos lirGetLocal ## <elts> <name> <1> <2> <get0>
+            >>>>$ >$ list.append <<<$ ## <elts> <name> <1> <2>
+            $2 >>$ op .pos lirGetLocal2 ## <elts> <name> <2> <get1>
+            >>>$ >$ list.append <<$ ## <elts> <name> <2>
+            op .pos lirGetLocal3 list.append
+          else ## <elts> <name> <0> <1> <2>
+            $3 >$ op .pos lirSetLocal3 ## <elts> <name> <0> <1> <set2>
+            >>>>$ >$ list.append <<<$ ## <elts> <name> <0> <1>
+            $2 >$ op .pos lirSetLocal2 ## <elts> <name> <0> <set1>
+            >>>$ >$ list.append <<$ ## <elts> <name> <0>
+            op .pos lirSetLocal list.append
+          end
+        return
         Reference case break
-      end
-        ## TODO? consistent type for atId: always var-type or always address-type?
-        op .dataType idInfo op .pos opAtId list.append
+      end op .pos lirAtLocal list.append
         op .val .SetId ? if
-          op .dataType BuiltIn .COPY_PTR op .pos opBuiltIn list.append
+          op .dataType typeContext LIROp.MemorySize.fromType .else
+            "unimplemented: dynamic sized values" ..panic
+          end op .pos lirMemCopy list.append
         end
       return
     break
@@ -1037,7 +1064,6 @@ proc(
       return
     break
     DeclareId .case =:: idInfo
-      "unimplemented: DeclareId" ..panic
       context [] .variables
         ## VariableInfo
           idInfo .nameId
@@ -1045,10 +1071,15 @@ proc(
           VariableType .LOCAL_VAR
         VariableInfo new list.append
       context .variables=
-      op list.append return ## nothing to change
+      idInfo .nameId op .pos lirDeclare list.append
+    return
     Copy case
+      op .dataType op .pos program toValTypes .Reference ? ! if
+        op .dataType op .pos context decayReference
+        return ## no copy needed for value types
+      end
       "unimplemented: Copy" ..panic
-      op .dataType =:: baseType
+      =:: baseType
       _BACKEND_ .QBE ! if ## currently QBE cannot handle value.types
         ## TODO? move delayed dereferencing to pre-compiler
         ## ? force deref for pure int/float value + keep copy (as deref hit) if type is not simple
