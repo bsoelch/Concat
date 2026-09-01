@@ -127,6 +127,16 @@ namespace: LIROp
       >$ .size i32.sbAppend
     end
   end
+  struct( ValType : src ValType : dst ) =:: CastInfo
+  namespace: CastInfo
+    proc( stringBuilder CastInfo -> stringBuilder ) =>: sbAppend
+      <$
+        $1 .src ValType.sbAppend
+        " -> ":s sb.appendStr
+        >$ .dst ValType.sbAppend
+      return
+    end
+  end
   union(
     _ : Nop
     bool : ConstBool
@@ -144,7 +154,9 @@ namespace: LIROp
     NameId : AtLocal
     Arithmetic typed : shadow: Arithmetic
     CompareType typed : Compare
-    ## TODO: convert
+    CastInfo : Transmute
+    CastInfo : Convert
+    CastInfo : ConvertUnsigned
     ## TODO: load
     ## TODO: store
     MemorySize : MemCopy
@@ -285,6 +297,12 @@ namespace: LIROp.new
   proc( CompareType #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirCompare
     <<$ CompareType LIROp.typed new LIROp.Data .Compare >$ LIROp new
   end
+  proc( ValType #+src+# ValType #+dst+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirTransmute
+    <<$ LIROp.CastInfo new LIROp.Data .Transmute >$ LIROp new
+  end
+  proc( ValType #+src+# ValType #+dst+# bool #+signed+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirConvert
+    <<<$ <<$ LIROp.CastInfo new >$ if LIROp.Data .ConvertUnsigned else LIROp.Data .Convert end >$ LIROp new
+  end
 end
 namespace: LIROp
   proc( type : auto: T stringBuilder T typed string -> stringBuilder T ) =>: prepareSbAppendTyped
@@ -322,6 +340,15 @@ namespace: LIROp
       break
       Compare .case
         "compare ":s prepareSbAppendTyped CompareType.sbAppend
+      break
+      Transmute .case
+        <$ "transmute ":s sb.appendStr >$ CastInfo.sbAppend
+      break
+      Convert .case
+        <$ "convert ":s sb.appendStr >$ CastInfo.sbAppend
+      break
+      ConvertUnsigned .case
+        <$ "convert unsigned ":s sb.appendStr >$ CastInfo.sbAppend
       break
       LocalLabel .case <$
         "label ":s sb.appendStr

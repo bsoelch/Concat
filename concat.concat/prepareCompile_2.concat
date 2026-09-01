@@ -317,6 +317,8 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
     ValType .FPTR StackValue .Value return
   else $ typeContext types.isPointer _if ..drop
     ValType .PTR StackValue .Value return
+  else $ typeContext types.isEnum _if
+    typeContext types.enumTagInfo ..drop pos program toValTypes return
   else $ typeContext types.isTupleLike _if
     eltBuffer@ list.wrapBuffer
       >$ typeContext types.compositeElts for
@@ -690,19 +692,33 @@ proc(
   src typeContext types.unwrapNamed =:: shadow: src
   dst typeContext types.unwrapNamed =:: shadow: dst
   src dst types.typeEquals if return end
-  src typeContext types.isPointer and dst typeContext types.isPointer if
-    ## TODO? check val-type equality instead of looking at data-types
-    src typeContext types.isCallable dst typeContext types.isCallable != if
-      "conversion between code and data pointer" ..panic
+  ## TODO? number-like Ctypes should also match isNumberOrPointer
+  ## ? isNumberLike -> Number or Pointer or CType-number or Enum
+  src typeContext types.isNumberOrPointer and dst typeContext types.isNumberOrPointer if
+    src pos program toValTypes .Value .else
+      "expected int or pointer to be Value type" ..panic
+    end
+      dst pos program toValTypes .Value .else
+        "expected int or pointer to be Value type" ..panic
+      end
+    $1 $1 == if ..drop.2 return end ## same val type -> no change necessary
+    $1 ValType.isPointer if ## src is pointer
+      $ ValType.isPointer if ## both are pointers
+        pos lirTransmute list.append ## transmute src to dst
+        return
+      else
+        >>$ $2 ValType.I_SIZE pos lirTransmute list.append <<$ ## transmute src to iSize
+      end
+    end
+    $ ValType.isPointer if
+      $ <<<$ ## <dst> <elts> <src> <dst>
+      signType .UNSIGNED pos lirConvert list.append ## cast int-value
+      ValType.I_SIZE >>$ pos lirTransmute list.append ## transmute int to ptr
+    else
+      signType .UNSIGNED pos lirConvert list.append
     end
     return
   end
-  src typeContext types.isIntOrPointer and dst typeContext types.isIntOrPointer if
-    ## TODO: int <-> int
-    ## 1. transmute [pointer -> iSize] 2. cast [int<->int] 3. transmute [iSize -> pointer]
-  end
-  ## TODO: float <-> float
-  ## TODO: int <-> float
   "unimplemented: cast" ..panic
 end
 
@@ -1155,6 +1171,18 @@ proc(
         end
       return
     New NewUnion case
+      op .dataType op .pos program toValTypes switch
+        Empty case return
+        Reference case break
+        Value Val2 Val3 case
+          op .val .New ? if
+            ## TODO! decay references
+            return ## struct by value only regroups exisiting ValTypes
+          else
+            "unimplemented: union by value" ..panic
+          end
+        break
+      end
       "unimplemented: New" ..panic
       op .dataType typeContext types.isValueType if
         op list.append return

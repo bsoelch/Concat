@@ -1086,6 +1086,11 @@ namespace: types
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
     unwrapNamed isPointer0
   end
+  proc( Type TypeContext ptr : context -> bool ) =>: export: isNumberOrPointer
+    context unwrapNamed
+      $ context isPointer if ..drop true return end
+    context isNumber return
+  end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getPointerBaseType
     unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer .case
