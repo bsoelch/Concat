@@ -97,6 +97,23 @@ namespace: StackValue
       return
     end
   end
+  proc( StackValue StackValue -> bool ) =>: eq
+    $1 ..tag $1 ..tag != if ..drop.2 false return end
+    switch
+      Empty case .Empty ? return
+      Reference case .Reference ? return
+      Value .case >$ .Value <unwrap> ValType.eq return
+      Val2 .case >$ .Val2 <unwrap> ## <as> <bs>
+        $1 .0 $1 .0 ValType.eq ! if ..drop.2 false return end
+        .1 >$ .1 ValType.eq
+      return
+      Val3 .case >$ .Val3 <unwrap>
+        $1 .0 $1 .0 ValType.eq ! if ..drop.2 false return end
+        $1 .1 $1 .2 ValType.eq ! if ..drop.2 false return end
+        .2 >$ .2 ValType.eq
+      return
+    end
+  end
   proc( stringBuilder StackValue -> stringBuilder ) =>: sbAppend
     switch
       Empty case "empty":s sb.appendStr return
@@ -536,6 +553,31 @@ proc(
     ValType .BOOL return
   end
 end
+proc( LIROp list
+  Type slice
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: popTypes
+  context [] .program =:: program
+  program .errors =:: errors
+  0 =:: mut: offset
+  slice.reversed for
+    pos program toValTypes
+      context .stack branchTree.pop .else
+        "stack underflow" sb.copyPtr
+        pos errors appendError
+        ..drop return
+      end []
+    $1 $1 StackValue.eq if ..drop.2 continue end
+    ## TODO: try decaying stack value
+    "stack values out of sync: " sb.copyPtr
+      >>$ StackValue.sbAppend
+      " got ":s sb.appendStr
+      >$ StackValue.sbAppend
+    pos errors appendError
+    return
+  finally offset 1 + offset= end
+end
 
 proc(
   ValType ValType
@@ -811,7 +853,7 @@ proc(
       op list.append return
     break
     Switch case
-      op .dataType op .pos context decayReference
+      op..dataType@ slice.wrap op .pos context popTypes
       ## TODO: update branches
       "unimplemented: switch" ..panic
       op list.append return
@@ -874,10 +916,7 @@ proc(
         op .val .GetId ? if
           context .stack $1 branchTree.push
         else
-          op .dataType op .pos context decayReference
-          context .stack branchTree.pop .if
-            ..drop ## TODO? verify that source and target value match
-          end
+          >>$ op..dataType@ slice.wrap op .pos context popTypes <<$
         end
       switch
         Empty case ..drop return
@@ -1113,8 +1152,16 @@ proc(
       end
       op .dataType
         $ typeContext types.getPointerBaseType .if >$ ..drop end
+        >$ ## pop arguments
+          $1 typeContext types.getProcIn .else
+           "expeced procedure" ..panic
+          end op .pos context popTypes
+          ## push return values
+          $1 typeContext types.getProcOut <unwrap> for
+            op .pos program toValTypes context .stack >$ branchTree.push
+          end
+        <$
       op .pos context determineProcType
-        ## TODO! (verify and) pop arguments
         $ .outArgCount 0 != if
           "unimplemented: handle out-args" ..panic
         end
@@ -1171,18 +1218,26 @@ proc(
         end
       return
     New NewUnion case
-      op .dataType op .pos program toValTypes switch
-        Empty case return
-        Reference case break
-        Value Val2 Val3 case
-          op .val .New ? if
-            ## TODO! decay references
-            return ## struct by value only regroups exisiting ValTypes
+      op .dataType op .pos program toValTypes .Reference ! .if
+        op .val .New ? if
+          op .dataType typeContext types.isTupleLike if
+            ## TODO? special case for tagged union: do not decay union value
+            >$
+              op .dataType typeContext types.compositeElts op .pos context popTypes
+            <$
           else
-            "unimplemented: union by value" ..panic
+            ## TODO: support arrays
+            "unsupported type for new" ..panic
           end
-        break
-      end
+          .Empty ! .if
+            context .stack >$ branchTree.push
+          else ..drop end
+          return
+        else
+          ## check if repr matches union, if yes keep otherwise changeto union-value
+          "unimplemented: union by value" ..panic
+        end
+      end ..drop
       "unimplemented: New" ..panic
       op .dataType typeContext types.isValueType if
         op list.append return

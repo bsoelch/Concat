@@ -54,6 +54,9 @@ namespace: LIROp
         default { } return
       end
     end
+    proc( ValType ValType -> bool ) =>: export: eq
+      ..tag >$ ..tag ==
+    end
     proc( stringBuilder ValType -> stringBuilder ) =>: export: sbAppend
       switch
         BOOL case "bool":s sb.appendStr return
