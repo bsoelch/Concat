@@ -87,13 +87,13 @@ namespace: LIROp
   ) =:: export: ProcTypeInfo
   namespace: ProcTypeInfo
     proc( stringBuilder ProcTypeInfo -> stringBuilder ) =>: sbAppend
-      $ .data >$ .argCount iSize cast.u slice.cutIndex <<$
+      $ .data >$ .argCount iSize cast.u slice.cutIndex >$ <<$
         for
-          ValType.sbAppend
+          ValType.sbAppend ' ' sb.appendC
         end
-        " -- ":s sb.appendStr
+        "--":s sb.appendStr
       >$ for
-        ValType.sbAppend
+        >$ ' ' sb.appendC <$ ValType.sbAppend
       end
     end
   end

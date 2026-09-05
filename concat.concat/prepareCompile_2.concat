@@ -304,7 +304,7 @@ proc( LIROp list Type : calledType FilePosition ptr : pos ConverterContext ptr.m
     program .programMemory=
     list.wrapSlice list.clear
       $1 list.asSlice retCount slice.cutIndex >>$ ## tmpList retType argTypes dstList
-      >$ list.appendSlice
+      >>$ list.appendSlice
       >$ list.appendSlice
     list.asSlice <$
   list.free ..drop
@@ -752,8 +752,12 @@ proc(
       $ ValType.isPointer if ## both are pointers
         pos lirTransmute list.append ## transmute src to dst
         return
-      else
-        >>$ $2 ValType.I_SIZE pos lirTransmute list.append <<$ ## transmute src to iSize
+      else ## transmute src to iSize
+        <<$ ## <lst> <src> <dst> -- <dst> <lst> <src>
+          ValType.I_SIZE pos lirTransmute list.append
+          ValType.I_SIZE
+        >>$ ## <dst> <lst> <src> -- <lst> <src> <dst>
+        $1 $1 ValType.eq if ..drop.2 return end
       end
     end
     $ ValType.isPointer if
@@ -864,10 +868,9 @@ proc(
     break
     Switch case
       op..dataType@ slice.wrap op .pos context popTypes
-      ## TODO: update branches
-      "unimplemented: switch" ..panic
-      op list.append return
-    break
+      ## TODO: convert switch to jump-table (if supported) or tree of conditional jumps
+      ## "unimplemented: switch" ..panic
+    return
     BuiltIn .case
       op .pos context compileBuiltIn
     return
