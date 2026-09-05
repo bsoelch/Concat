@@ -1598,7 +1598,7 @@ proc(
     context nextJumpLabelId
   BranchId new =:: geBranch
   labels p [] .value switchLabelAsInt =:: cmpVal
-  labels p slice.cutIndex =:: lElts =:: rElts
+  labels p slice.cutIndex =:: rElts =:: lElts
   sb
     ## cmp int
       valType

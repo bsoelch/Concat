@@ -153,10 +153,10 @@ namespace: string
     str char8 slice cast from len slice.getSlice string cast return
   end
   proc( string : str iSize : index -> string string ) =>: export: cutIndex
-    str char8 slice cast index slice.cutIndex ..swap string cast ..swap string cast return
+    str char8 slice cast index slice.cutIndex >$ string cast >$ string cast return
   end
   proc( string : str iSize : index -> string string ) =>: export: splitIndex
-    str char8 slice cast index slice.splitIndex ..swap string cast ..swap string cast return
+    str char8 slice cast index slice.splitIndex >$ string cast >$ string cast return
   end
   proc( string : str char8 : chr -> string string ) =>: export: split
     str char8 slice cast chr slice.split ..swap string cast ..swap string cast return

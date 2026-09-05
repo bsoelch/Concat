@@ -812,8 +812,8 @@ namespace: slice
     T slice : elts
     iSize : index
   -> T slice T slice ) =>: export: cutIndex
-    elts index tail
     elts index head
+    elts index tail
     return
   end
   proc(
@@ -872,7 +872,7 @@ namespace: slice
   proc( type : auto: T
     T slice ( T -> bool ) ptr : f
   -> T slice T slice ) =>: export: takeWhile
-    0:iSize while $1 $1 get .and f () do 1 + end cutIndex
+    0:iSize while $1 $1 get .and f () do 1 + end cutIndex <$
   end
 
   proc( type.pointerValue : auto: V  V optional slice : elt -> V slice optional ) =>: export: unwrapAll

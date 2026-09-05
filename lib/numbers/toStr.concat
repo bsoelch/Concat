@@ -172,7 +172,7 @@ namespace: number
           sb.appendStr
           >$ for ..drop '0' sb.appendC end
         else
-          iSize cast.u string.cutIndex <$ <<$ ## B sb A
+          iSize cast.u string.cutIndex <<$ ## B sb A
             sb.appendStr
             >$ removeTrailingZeros <$
             $1 .length 0 != and $1 "0":s string.eq ! if

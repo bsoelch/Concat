@@ -304,7 +304,7 @@ proc( LIROp list Type : calledType FilePosition ptr : pos ConverterContext ptr.m
     program .programMemory=
     list.wrapSlice list.clear
       $1 list.asSlice retCount slice.cutIndex >>$ ## tmpList retType argTypes dstList
-      >>$ list.appendSlice
+      >$ list.appendSlice
       >$ list.appendSlice
     list.asSlice <$
   list.free ..drop
