@@ -292,7 +292,8 @@ namespace: LIROp.new
     LIROp.Data .EndProc >$ LIROp new
   end
   proc( string #+msg+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirPanic
-    "unimplemented: lir-panic" ..panic
+    >$ ..drop ## TODO: panic
+    LIROp.Data .Nop >$ LIROp new
   end
   proc( LIROp.Arithmetic #+op+# ValType #+opType+# FilePosition ptr #+pos+# -> LIROp ) =>: export: lirArithmetic
     <<$ LIROp.Arithmetic LIROp.typed new LIROp.Data .Arithmetic >$ LIROp new

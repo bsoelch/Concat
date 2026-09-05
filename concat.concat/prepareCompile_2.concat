@@ -731,8 +731,12 @@ proc(
   idContext .constContext =:: constContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  src typeContext types.unwrapNamed =:: shadow: src
-  dst typeContext types.unwrapNamed =:: shadow: dst
+  src typeContext types.unwrapNamed
+    .CType .if types.cTypeAsType end
+  =:: shadow: src
+  dst typeContext types.unwrapNamed
+    .CType .if types.cTypeAsType end
+  =:: shadow: dst
   src dst types.typeEquals if return end
   ## TODO? number-like Ctypes should also match isNumberOrPointer
   ## ? isNumberLike -> Number or Pointer or CType-number or Enum
@@ -761,6 +765,12 @@ proc(
     end
     return
   end
+  0 sb.create
+    src typeContext sb.appendType
+    " to ":s sb.appendStr
+    dst typeContext sb.appendType
+    $ sb.asStr io.println
+  sb.free ..drop
   "unimplemented: cast" ..panic
 end
 
