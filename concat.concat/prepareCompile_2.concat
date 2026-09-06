@@ -778,6 +778,57 @@ proc(
   "unimplemented: cast" ..panic
 end
 
+proc( SwitchData ptr LIROp list -> SwitchData ptr LIROp list i64 ) =>: getLowSwitchBound
+  $1 [] .switchLabels 0 [] .value switchLabelAsInt
+end
+proc( SwitchData ptr LIROp list -> SwitchData ptr LIROp list i64 ) =>: getHighSwitchBound
+  $1 [] .switchLabels $ .length 1 - [] .value switchLabelAsInt
+end
+proc(
+  SwitchData ptr
+  LIROp list
+  ValType : switchValType
+  FilePosition ptr : pos
+-> SwitchData ptr LIROp list ) =>: generateSwitchBoundsCheck
+  getLowSwitchBound $ 0 == if ..drop
+    getHighSwitchBound switchValType pos lirIntConst list.append
+    $1 [] .defaultLabel CompareType .UGT switchValType pos lirJump list.append
+  else
+    switchValType pos lirIntConst list.append
+    $1 [] .defaultLabel CompareType .LT switchValType pos lirJump list.append
+    getHighSwitchBound switchValType pos lirIntConst list.append
+    $1 [] .defaultLabel CompareType .GT switchValType pos lirJump list.append
+  end
+end
+proc(
+  SwitchData ptr
+  LIROp list
+  ValType : switchValType
+  FilePosition ptr : pos
+-> LIROp list ) =>: generateSwitchJumps
+  ## TODO: generate jumpTable / nested ifs
+  ## 1. detect small ranges (<=3 elts) -> generate 1 or 2 jumps
+  ## 2. if range is dense and table is supported: generate table
+  ## 3. split range (if table supported move split point to endpoint of current range)
+  >$ ..drop
+end
+proc(
+  LIROp list
+  SwitchId
+  FilePosition ptr : pos
+  ConverterContext ptr.mut : context
+-> LIROp list ) =>: compileSwitch
+  context [] .program =:: program
+  SwitchId.getSwitchData <$
+    $1 .switchType
+      $ [] pos program toValTypes .Value .else
+        "expected switch type to be primitive" ..panic
+      end =:: switchValType
+    slice.wrap pos context popTypes
+    switchValType pos generateSwitchBoundsCheck
+  switchValType pos generateSwitchJumps
+end
+
 proc(
   LIROp list
   Operation : mut: op
@@ -866,11 +917,7 @@ proc(
       "unimplemented: BitCast" ..panic
       op list.append return
     break
-    Switch case
-      op..dataType@ slice.wrap op .pos context popTypes
-      ## TODO: convert switch to jump-table (if supported) or tree of conditional jumps
-      ## "unimplemented: switch" ..panic
-    return
+    Switch .case op .pos context compileSwitch return
     BuiltIn .case
       op .pos context compileBuiltIn
     return
@@ -1328,7 +1375,7 @@ proc(
           $2 list.peek .and .data .Arithmetic .and $ .val [] .NOT >$ .valType [] .BOOL & if
             >>$ list.pop ..drop <<$
             .TRUE if CompareType .FALSE else CompareType .TRUE end ValType .BOOL
-          else _BACKEND_ .ASM and $2 list.peek .and .data .Compare ? _if
+          else $2 list.peek .and .data .Compare ? _if
             >>$ list.pop .and .data .Compare .else ..unreachable end
             >$ <<<$ ## jmpDst cmpType list cmpOp -- list jmpDst cmpType cmpOp
             mergeJumpIf
