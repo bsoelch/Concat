@@ -36,6 +36,7 @@ namespace: BackJumpInfo
   end
 end
 
+## TODO? use named type for CaseId
 struct( ConstValue : value i32 : caseId FilePosition ptr : pos ) =:: export: LabelData
 proc( ConstValue : label -> i64 ) =>: export: switchLabelAsInt
   label .Int .if

@@ -778,11 +778,14 @@ proc(
   "unimplemented: cast" ..panic
 end
 
-proc( SwitchData ptr LIROp list -> SwitchData ptr LIROp list i64 ) =>: getLowSwitchBound
-  $1 [] .switchLabels 0 [] .value switchLabelAsInt
+proc( SwitchData ptr -> i64 ) =>: getLowSwitchBound
+ [] .switchLabels 0 [] .value switchLabelAsInt
 end
-proc( SwitchData ptr LIROp list -> SwitchData ptr LIROp list i64 ) =>: getHighSwitchBound
-  $1 [] .switchLabels $ .length 1 - [] .value switchLabelAsInt
+proc( SwitchData ptr -> i64 ) =>: getHighSwitchBound
+  [] .switchLabels $ .length 1 - [] .value switchLabelAsInt
+end
+proc( SwitchData ptr -> i64 i64 ) =>: getSwitchBounds
+  $ getLowSwitchBound >$ getHighSwitchBound
 end
 proc(
   SwitchData ptr
@@ -790,27 +793,125 @@ proc(
   ValType : switchValType
   FilePosition ptr : pos
 -> SwitchData ptr LIROp list ) =>: generateSwitchBoundsCheck
-  getLowSwitchBound $ 0 == if ..drop
-    getHighSwitchBound switchValType pos lirIntConst list.append
+  $1 getLowSwitchBound $ 0 == if ..drop
+    $1 getHighSwitchBound switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .UGT switchValType pos lirJump list.append
   else
     switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .LT switchValType pos lirJump list.append
-    getHighSwitchBound switchValType pos lirIntConst list.append
+    $1 getHighSwitchBound switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .GT switchValType pos lirJump list.append
   end
 end
 proc(
   SwitchData ptr
   LIROp list
+  LabelData : label
+  ValType : switchValType
+  FilePosition ptr : pos
+-> SwitchData ptr LIROp list ) =>: generateSwitchCaseJump
+  label .value switchLabelAsInt switchValType pos lirIntConst list.append
+  $1 [] .branchLabels
+    label .caseId []
+  CompareType .EQ switchValType pos lirJump list.append
+end
+enum( VALID CASE4 INVALID ) =:: DenseCaseIdInfoState
+struct(
+  i32 : case1
+  i32 : case2
+  i32 : case3
+  i32 : case4
+  i8 : count1
+  i8 : count2
+  i8 : count3
+  DenseCaseIdInfoState : state
+) =:: DenseCaseIdInfo
+namespace: DenseCaseIdInfo
+  proc( -> DenseCaseIdInfo ) =>: init
+    0 0 0 0 0 0 0 DenseCaseIdInfoState .VALID DenseCaseIdInfo new
+  end
+  proc(
+    i32 #+case1+# i32 #+count1+# i32 #+case2+# i32 #+count2+#
+  -> i32 i32 ) =>: caseMax
+    $ $3 < if ..drop.2 return end
+    $ $3 > if >>>$ >>>$ ..drop.2 return end
+    ## counts are the same -> prefer lower case
+    ..drop $ $3 >= if ..drop return end
+    >>$ ..drop >$
+  end
+  proc( DenseCaseIdInfo iSize -> i32 optional ) =>: check
+    $1 .state .INVALID if ..drop.2 { } return end
+    $1 .case4 $1 i32 cast.u ## <info> <total> <id> <total>
+      $3 .count1 i32 cast.u $4 .count2 i32 cast.u + $4 .count3 i32 cast.u +
+    - ## <info> <total> <id4> <count4>
+    $3 .case1 $4 .count1 i32 cast.u caseMax
+    $3 .case2 $4 .count2 i32 cast.u caseMax
+    $3 .case3 $4 .count3 i32 cast.u caseMax
+    ## <info> <total> <idMax> <countMax>
+    >>$ i32 cast.u >$ - 3 u> if ## <info> <idMax> | <[total-countMax > 3]>
+      ..drop.2 { } return
+    end >$ ..drop optional.wrap
+  end
+  proc( i8 -> i8 ) =>: saturatingIncI8 ## TODO? move to libary
+    1 + $ 0 == if ..drop 0xff:i8 end
+  end
+  proc( DenseCaseIdInfo i32 -> DenseCaseIdInfo bool ) =>: add
+    $1 .state .INVALID if ..drop true return end
+    $1 .case1 $1 == or $1 .count1 0 == if
+      >$ .case1= $ .count1 saturatingIncI8 >$ .count1= false return
+    end
+    $1 .case2 $1 == or $1 .count2 0 == if
+      >$ .case2= $ .count2 saturatingIncI8 >$ .count2= false return
+    end
+    $1 .case3 $1 == or $1 .count3 0 == if
+      >$ .case3= $ .count3 saturatingIncI8 >$ .count3= false return
+    end
+    $1 .case4 $1 == or $1 .state .VALID if
+      >$ .case4= DenseCaseIdInfoState .CASE4 >$ .state= false return
+    end
+    ..drop DenseCaseIdInfoState .INVALID >$ .state= true
+  end
+end
+
+proc(
+  SwitchData ptr
+  LIROp list
+  LabelData slice : labels
+  i64 : lowBound
+  i64 : highBound
   ValType : switchValType
   FilePosition ptr : pos
 -> LIROp list ) =>: generateSwitchJumps
-  ## TODO: generate jumpTable / nested ifs
-  ## 1. detect small ranges (<=3 elts) -> generate 1 or 2 jumps
-  ## 2. if range is dense and table is supported: generate table
-  ## 3. split range (if table supported move split point to endpoint of current range)
-  >$ ..drop
+  labels .length 0 == if
+    >$ [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    return
+  end
+  highBound lowBound - labels .length 1 - i64 cast.u == =:: dense
+  dense if
+    DenseCaseIdInfo.init
+      labels for .caseId DenseCaseIdInfo.add if break end end
+    labels .length DenseCaseIdInfo.check .if ## dense jump to same case
+      <<$
+        labels for
+          $ .caseId $4 != if
+            switchValType pos generateSwitchCaseJump
+          else ..drop end
+        end
+      >$ [] .branchLabels >>$ []
+        CompareType .NONE
+      switchValType pos lirJump list.append
+      return
+    end
+  end
+  labels .length 3 u<= if
+    ## small range -> generate direct jumps
+    labels for switchValType pos generateSwitchCaseJump end
+    >$ [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    return
+  end
+  ## if range is dense and table is supported: generate table
+  ## split range in two parts (minimizing maximal nesting depth)
+  "unimplemented: generate switch-tree" ..panic
 end
 proc(
   LIROp list
@@ -826,6 +927,8 @@ proc(
       end =:: switchValType
     slice.wrap pos context popTypes
     switchValType pos generateSwitchBoundsCheck
+  $1 [] .switchLabels list.asSlice
+    $2 getSwitchBounds
   switchValType pos generateSwitchJumps
 end
 
