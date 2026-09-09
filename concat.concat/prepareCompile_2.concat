@@ -794,11 +794,14 @@ proc(
   FilePosition ptr : pos
 -> SwitchData ptr LIROp list ) =>: generateSwitchBoundsCheck
   $1 getLowSwitchBound $ 0 == if ..drop
+    0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .UGT switchValType pos lirJump list.append
   else
+    <$ 0 pos lirCopy list.append >$
     switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .LT switchValType pos lirJump list.append
+    0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
     $1 [] .defaultLabel CompareType .GT switchValType pos lirJump list.append
   end
@@ -810,10 +813,26 @@ proc(
   ValType : switchValType
   FilePosition ptr : pos
 -> SwitchData ptr LIROp list ) =>: generateSwitchCaseJump
+  0 pos lirCopy list.append
   label .value switchLabelAsInt switchValType pos lirIntConst list.append
   $1 [] .branchLabels
     label .caseId []
   CompareType .EQ switchValType pos lirJump list.append
+end
+proc(
+  SwitchData ptr
+  LIROp list
+  i64 : splitIndex
+  ValType : switchValType
+  FilePosition ptr : pos
+  ProgramContext ptr.mut : program
+-> SwitchData ptr LIROp list LocalLabelInfo ) =>: generateSwitchSplitJump
+  program program.nextLocalLabel <<$
+    $2 LocalLabelType .HINT_START LocalLabelInfo new pos lirLabel list.append
+    0 pos lirCopy list.append
+    splitIndex switchValType pos lirIntConst list.append
+    $2 CompareType .GE switchValType pos lirJump list.append
+  >>$ LocalLabelType .LABEL_END LocalLabelInfo new
 end
 enum( VALID CASE4 INVALID ) =:: DenseCaseIdInfoState
 struct(
@@ -872,7 +891,11 @@ namespace: DenseCaseIdInfo
     ..drop DenseCaseIdInfoState .INVALID >$ .state= true
   end
 end
-
+proc( LabelData slice -> LabelData slice LabelData slice i64 ) =>: splitSwitchRange
+  ## TODO: smarter choice of siwth index for dense ranges/switch with table
+  $ .length 2 u/ slice.cutIndex ## <labels> <index>
+  $ 0 [] .value switchLabelAsInt
+end
 proc(
   SwitchData ptr
   LIROp list
@@ -881,9 +904,10 @@ proc(
   i64 : highBound
   ValType : switchValType
   FilePosition ptr : pos
--> LIROp list ) =>: generateSwitchJumps
+  ProgramContext ptr.mut : program
+-> SwitchData ptr LIROp list ) =>: generateSwitchJumps
   labels .length 0 == if
-    >$ [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
     return
   end
   highBound lowBound - labels .length 1 - i64 cast.u == =:: dense
@@ -897,7 +921,7 @@ proc(
             switchValType pos generateSwitchCaseJump
           else ..drop end
         end
-      >$ [] .branchLabels >>$ []
+      $1 [] .branchLabels >>>$ []
         CompareType .NONE
       switchValType pos lirJump list.append
       return
@@ -906,12 +930,17 @@ proc(
   labels .length 3 u<= if
     ## small range -> generate direct jumps
     labels for switchValType pos generateSwitchCaseJump end
-    >$ [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
     return
   end
-  ## if range is dense and table is supported: generate table
-  ## split range in two parts (minimizing maximal nesting depth)
-  "unimplemented: generate switch-tree" ..panic
+  ## TODO: if range is dense and table is supported: generate table
+  labels splitSwitchRange <<$ =:: tail =:: head
+  <<$ ## <splitIndex> <switchData> <elts>
+    $2 switchValType pos program generateSwitchSplitJump <<$
+    ## <splitIndex> <splitLabel> <switchData> <elts>
+    head lowBound $5 switchValType pos program generateSwitchJumps
+    >>$ pos lirLabel list.append ## <splitIndex> <switchData> <elts>
+  tail >>>$ highBound switchValType pos program generateSwitchJumps
 end
 proc(
   LIROp list
@@ -928,8 +957,9 @@ proc(
     slice.wrap pos context popTypes
     switchValType pos generateSwitchBoundsCheck
   $1 [] .switchLabels list.asSlice
-    $2 getSwitchBounds
-  switchValType pos generateSwitchJumps
+    $2 getSwitchBounds switchValType pos program generateSwitchJumps
+  >$ ..drop
+  ## TODO: drop switch-value at start of branches
 end
 
 proc(
