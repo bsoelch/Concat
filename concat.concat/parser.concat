@@ -1271,29 +1271,8 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
     else $ "default":s string.eq or $ ".default":s string.eq _if =:: opName
       fileState program wordPos =:: blockPos
       "'default' is deprecated use `_ case` instead" sb.copyPtr
-      blockPos errors appendWarning
-      state peekBlock .and .blockData .Switch .if =:: switchData
-        switchData .state .DEFAULT if
-          "unexpected 'default' statement, switch-block already has a 'default' branch" sb.copyPtr
-          blockPos errors appendError
-        else switchData .state .CASE_LABEL ! and switchData .state .IMPLICIT_BREAK ! _if
-          "unexpected 'default' statement, missing 'break' at end of case-body" sb.copyPtr
-          blockPos errors appendError
-        end
-        SwitchBlockState .DEFAULT switchData .state=
-        iSize optional.empty switchData .implicitBreak=
-        switchData [] .prevCasePosition blockPos state setBlockJump
-        state opCount switchData .prevCasePosition=
-        opName 0 string.charAt '.' == if
-          BlockType .DOT_DEFAULT
-        else
-          BlockType .DEFAULT
-        end blockPos preOpBlock  state appendOp
-        return
-      else
-        "'default' is only allowed in switch-case-blocks" sb.copyPtr blockPos errors appendError
-        return
-      end
+      blockPos errors appendError
+      return
     else $ "=>":s string.eq or $ "=>:":s string.eq or $ "@{":s string.eq _if =:: opName
       opName .length 3:iSize == =:: named
       opName 0 [] '@' == =:: isQuotation
