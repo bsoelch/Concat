@@ -19,7 +19,6 @@ enum(
   FINALLY
   SWITCH
   CASE DOT_CASE
-  DEFAULT DOT_DEFAULT
   AND
   OR
   INITIALIZER
@@ -85,12 +84,6 @@ namespace: sb
         return
       DOT_CASE case
         ".case":s sb.appendStr
-        return
-      DEFAULT case
-        "default":s sb.appendStr
-        return
-      DOT_DEFAULT case
-        ".default":s sb.appendStr
         return
       AND case
         "and":s sb.appendStr

@@ -2392,7 +2392,7 @@ proc(
   switchBlock [] .switchId =:: switchId
   op [] .val .Block .if
     .blockType switch
-      CASE DOT_CASE DEFAULT DOT_DEFAULT case
+      CASE DOT_CASE case
         false return
       BREAK case
         switchBlock [] .allowBreak if
@@ -4546,7 +4546,7 @@ proc(
             labelType switchId op .pos opSwitch state appendOp ..drop
             false state .reachable=
             continue.opLoop
-          CASE DOT_CASE DEFAULT DOT_DEFAULT case
+          CASE DOT_CASE case
             state peekBlock .and .Switch .else
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
@@ -4568,35 +4568,25 @@ proc(
             switchBlock [] .hasDefault if
               "unexpected " sb.copyPtr
                 blockType sb.appendBlockType
-                ", " sb.appendS
-                BlockType .DEFAULT sb.appendBlockType
-                blockType .DEFAULT or blockType .DOT_DEFAULT if
-                  " can only appear once in " sb.appendS
-                else
-                  " has to be last case in " sb.appendS
-                end
+                ", `_ case` as to be last case in ":s sb.appendStr
                 BlockType .SWITCH sb.appendBlockType
-                "-block" sb.appendS
+                "-block":s sb.appendStr
               op .pos errors appendError
               continue.opLoop
             end
             switchData [] .switchLabels list.peek =:: prev?
             switchBlock [] .switchType =:: switchType
             switchBlock .caseLabels [] .length =:: currentCaseId
-            blockType .DEFAULT or blockType .DOT_DEFAULT or switchData [] .isDefaultBranch if
+            switchData [] .isDefaultBranch if
               prev? .else
-                "unexpected " sb.copyPtr
-                  BlockType .DEFAULT sb.appendBlockType
-                  "-statement, " sb.appendS
+                "unexpected `_ case` -statement, " sb.copyPtr
                   BlockType .SWITCH sb.appendBlockType
-                  "-block can only at least one " sb.appendS
+                  "-block can only at least one ":s sb.appendStr
                   BlockType .CASE sb.appendBlockType
                 op .pos errors appendError
                 continue.opLoop
               end [] .caseId iSize cast.u currentCaseId == if
-                64 sb.create
-                  BlockType .DEFAULT sb.appendBlockType
-                  " cannot be preceded by at labels" sb.appendS
+                "`_ case` cannot be preceded by at labels" sb.copyPtr
                 op .pos errors appendError
               end
               true switchBlock .hasDefault=
@@ -4665,8 +4655,7 @@ proc(
                   switchType typeContext sb.appendType
                 op .pos errors appendError
               end
-            else blockType .DOT_DEFAULT or
-                switchData [] .isDefaultBranch and blockType .DOT_CASE _if
+            else blockType .DOT_CASE and switchData [] .isDefaultBranch _if
               ## pushValue
                 switchBaseType
                 ConstValue .None
@@ -5377,7 +5366,7 @@ proc(
             switchBlock .castOffsets list.free ..drop
             idContext id.closeScope ! "closing while-scope worked" assert
             continue.opLoop
-          CASE DEFAULT DOT_CASE DOT_DEFAULT case ## end-case should not be created by parser
+          CASE DOT_CASE case ## end-case should not be created by parser
             break
           FINALLY case
             op .pos state closeBlock .While .else
