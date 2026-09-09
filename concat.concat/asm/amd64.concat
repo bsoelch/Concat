@@ -122,7 +122,7 @@ namespace: AMD64
       i switch
         0 case RAX optional.wrap return
         1 case RDX optional.wrap return
-        default RegisterId optional.empty return
+        _ case RegisterId optional.empty return
       end
     end
     proc( i32 : i -> RegisterId optional ) =>: export: floatRet

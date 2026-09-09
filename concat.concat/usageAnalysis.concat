@@ -435,7 +435,7 @@ proc(
         end
       end
     break
-    default break
+    _ case break
   end
 end
 proc(
@@ -484,7 +484,7 @@ proc(
         op program sb.appendOp
       op .pos errors appendError
     newOps return
-    default break
+    _ case break
   end
   newOps op list.append return ## nothing to change
 end
@@ -654,7 +654,7 @@ proc(
     SetElement SetNestedElement case
       op .dataType op .pos opCopy list.append ## TODO only copy if value is not owned
     break
-    default break
+    _ case break
   end
   op list.append return ## nothing to change
 end

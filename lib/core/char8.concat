@@ -18,7 +18,7 @@ namespace: char8
     switch
       ' ' '\n' '\t' '\v' '\f' '\r' case
         true return
-      default
+      _ case
         false return
     end
   end

@@ -598,7 +598,7 @@ namespace: types
         INT FLOAT case 1 return
         MIXED case 2 return
         ## choose positive value that does not overflow i32 for first 256 additions
-        default 127 return
+        _ case 127 return
       end
     end
     proc( SimpleTypeInfo SimpleTypeInfo -> SimpleTypeInfo ) : alias: mix i8.or
@@ -1067,20 +1067,20 @@ namespace: types
   proc( Type -> bool ) =>: export: isValuePointer0
     switch
       Pointer MutablePointer case true return
-      default false return
+      _ case false return
     end
   end
   proc( Type TypeContext ptr -> Type optional ) =>: export: getValuePtrBaseType
     unwrapNamed switch
       Pointer MutablePointer .case
         arrayTypeBase optional.wrap return
-      default Type optional.empty return
+      _ case Type optional.empty return
     end
   end
   proc( Type -> bool ) =>: export: isPointer0
     switch
       Pointer MutablePointer RawPointer MutableRawPointer case true return
-      default false return
+      _ case false return
     end
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isPointer
@@ -1095,7 +1095,7 @@ namespace: types
     unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer .case
         arrayTypeBase optional.wrap return
-      default Type optional.empty return
+      _ case Type optional.empty return
     end
   end
   proc( Type -> bool ) =>: export: isArray0
@@ -1113,7 +1113,7 @@ namespace: types
     unwrapNamed switch
       ArrayType Pointer MutablePointer case true return
       RawPointer MutableRawPointer case allowRaw return
-      default false return
+      _ case false return
     end
   end
   ## pointer to array-type ( fixed size and not 0D )
@@ -1150,7 +1150,7 @@ namespace: types
     box context unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case
         arrayTypeBase optional.wrap return
-      default Type optional.empty return
+      _ case Type optional.empty return
     end
   end
   proc( ArrayId -> ArraySize ) =>: export: arrayTypeSize
@@ -1159,7 +1159,7 @@ namespace: types
   proc( Type : box TypeContext ptr : context -> ArraySize ) =>: export: getArraySize
     box context unwrapNamed switch
       Pointer MutablePointer RawPointer MutableRawPointer ArrayType .case arrayTypeSize return
-      default ArraySize .None return
+      _ case ArraySize .None return
     end
   end
 
@@ -1357,7 +1357,7 @@ namespace: types
   proc( Type -> bool ) =>: export: isTaggedOrComputedUnion0
     switch
       TaggedUnion ComputedUnion case true return
-      default false return
+      _ case false return
     end
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isTaggedUnion
@@ -2294,7 +2294,7 @@ namespace: types
     box context unwrapNamed switch
       SetType .case .baseType [] return
       RefinementType .case .baseType [] return
-      default box return
+      _ case box return
     end
   end
   proc( Type TypeContext ptr : context -> ProcId optional ) =>: export: getTypeTrait

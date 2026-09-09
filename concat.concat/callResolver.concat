@@ -42,7 +42,7 @@ namespace: ArgumentId
     a iSize cast TAG_MASK & switch
       TAG_NAME case a NameId cast! NameId.hash return
       TAG_INDEX case a i32 cast.u 2381 * return
-      default "unexpected tag for ArgumentId" ..panic
+      _ case "unexpected tag for ArgumentId" ..panic
     end
   end
   proc( ArgumentId : a ArgumentId : b -> bool ) =>: export: eq
@@ -51,7 +51,7 @@ namespace: ArgumentId
     a iSize cast TAG_MASK & switch
       TAG_NAME case a NameId cast! b NameId cast! NameId.eq return
       TAG_INDEX case a iSize cast b iSize cast iSize.eq return
-      default "unexpected tag for ArgumentId" ..panic
+      _ case "unexpected tag for ArgumentId" ..panic
     end
   end
 end
@@ -92,7 +92,7 @@ proc( ConstValue : val -> types.ArraySize ) =>: constAsSize
   val switch
     Int .case types.ArraySize .Int return
     GenericArg .case types.ArraySize .GenericArg return
-    default ..unreachable
+    _ case ..unreachable
   end
 end
 
@@ -250,7 +250,7 @@ proc(
         ## TODO update initializer type
         Initializer case
           "generic initializers are not supported" ..panic
-        default ..unreachable
+        _ case ..unreachable
       end
         ## reset buffer
         typeBuffer [] typeOffset list.setLength typeBuffer =[]
@@ -327,7 +327,7 @@ proc(
                 NonEmpty case arg break
               end
               break
-            default arg break ## argument not generic
+            _ case arg break ## argument not generic
           end list.append
         argBuffer =[]
       end

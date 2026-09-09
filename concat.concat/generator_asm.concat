@@ -24,7 +24,7 @@ namespace: ValType
       end break
       Pointer MutablePointer RawPointer MutableRawPointer case
         ValType .POINTER return
-      default break
+      _ case break
     end
     "unsupported type: " sb.copyPtr
       t typeContext sb.appendType
@@ -351,7 +351,7 @@ proc( ConstValue : constant ValType : valType  CompilerContext ptr.mut : context
       Float .case
         asm.Value .Float valType StackValue.create list.append
       break
-      default "unsupported value-constant" ..panic
+      _ case "unsupported value-constant" ..panic
     end
   context .stack=
 end
@@ -878,7 +878,7 @@ proc(
       end
     break
     Int ConstPtr case break
-    default "unimplemented: non-register source" ..panic
+    _ case "unimplemented: non-register source" ..panic
   end
   ## clear references in destination register
   dstValue .Register .if =:: dstReg
@@ -919,7 +919,7 @@ proc(
       end
     break
     Int Float ConstPtr case break
-    default
+    _ case
       "unsupported source value: " sb.copyPtr
         src .value context [] .asmContext asm.appendValue
       pos errors appendError
@@ -947,7 +947,7 @@ proc(
             end src=
           end
         break
-        default ## TODO for multi-use: pick most convenient target among uses
+        _ case ## TODO for multi-use: pick most convenient target among uses
           "multi-use registers are not yet supported" sb.copyPtr
             dst .value context [] .asmContext asm.appendValue
           pos errors appendWarning
@@ -1108,7 +1108,7 @@ proc(
     OR_I64  case ValType .I64 BinOp .OR  pos context opBinOp return
     XOR_I32 case ValType .I32 BinOp .XOR pos context opBinOp return
     XOR_I64 case ValType .I64 BinOp .XOR pos context opBinOp return
-    default break
+    _ case break
   end
   "unsupported built-in: " sb.copyPtr
     builtIn sb.appendBuiltIn
@@ -1267,7 +1267,7 @@ proc(
         ARGUMENT LOCAL_VAR case
           idInfo .nameId context opLoadLocal context pushValue
         return
-        default break
+        _ case break
       end
     break
     SetId .case =:: idInfo
@@ -1278,7 +1278,7 @@ proc(
             newVal
           context opStoreLocal
         return
-        default break
+        _ case break
       end
     break
     BuiltIn .case op .pos context compileBuiltIn return
@@ -1407,7 +1407,7 @@ proc(
         ULE case AMD64.op.JBE break
         UGE case AMD64.op.JAE break
         UGT case AMD64.op.JA break
-        default "unimplemented: jump-type" ..panic break
+        _ case "unimplemented: jump-type" ..panic break
       end jumpLabel asm.LocalLabel cast asm.op1 list.append
       labelInfo .cmpType .NONE ! context .reachable=
     return
@@ -1467,7 +1467,7 @@ proc(
         return
       end
     break
-    default break
+    _ case break
   end
   "unsupported operation: " sb.copyPtr
     op program sb.appendOp
@@ -1600,7 +1600,7 @@ proc( file.File : target ProgramContext ptr.mut : program -> file.File ) =>: exp
       ## TODO extract to procedure
       info .value switch
         Array8 .case string.fromBytes asm.Data .String asm.data list.append break
-        default "unsupported pointer constant" ..panic
+        _ case "unsupported pointer constant" ..panic
       end
     end
   =:: ops

@@ -61,7 +61,7 @@ proc( BuiltIn -> bool ) =>: canMergeJumpIf
     UGE_I8 UGE_I16 UGE_I32 UGE_I64           ## u>=
     UGT_I8 UGT_I16 UGT_I32 UGT_I64           ## u>
     case true return
-    default false return
+    _ case false return
   end
 end
 proc( CompareType -> CompareType ) =>: adjustFlippedFloatCmpType
@@ -72,7 +72,7 @@ proc( CompareType -> CompareType ) =>: adjustFlippedFloatCmpType
     LE case CompareType .ULE break
     GE case CompareType .UGE break
     GT case CompareType .UGT break
-    default "unexpected compare-type for float" ..panic
+    _ case "unexpected compare-type for float" ..panic
   end
 end
 proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJumpIf
@@ -113,7 +113,7 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
     UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
       flip if CompareType .ULE else CompareType .UGT end
     break
-    default "unsupported built-in for jump-merge" ..panic
+    _ case "unsupported built-in for jump-merge" ..panic
   end
   builtIn switch
     EQ_BOOL NE_BOOL case types.primitive.BOOL break
@@ -131,7 +131,7 @@ proc( CompareType : cmpType BuiltIn : builtIn -> CompareType Type ) =>: mergeJum
     EQ_F64 NE_F64 LT_F64 LE_F64 GE_F64 GT_F64 case
       flip if adjustFlippedFloatCmpType end
       types.primitive.F64 break
-    default "unsupported built-in for jump-merge" ..panic
+    _ case "unsupported built-in for jump-merge" ..panic
   end
 end
 ## TODO? merge built-ins: `compare + not` -> `compare`, `and + 0 eq/ne` -?> `bit-test`

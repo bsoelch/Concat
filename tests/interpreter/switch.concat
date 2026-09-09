@@ -16,7 +16,7 @@ proc( i64 -> bool ) =>: isFermatPrime
     17    case true break
     257   case true break
     65537 case true break
-    default   false break
+    _ case   false break
   end return
 end
 42 isFermatPrime ! "42 is not a Fermat prime" assert

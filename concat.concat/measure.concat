@@ -96,7 +96,7 @@ proc( Operation ptr : op ProgramContext ptr.mut : prog Type i32 hashMap ptr.mut 
     NewUnion ConstantReference case
       op [] .dataType 0 op [] .pos prog visited types declaredType
     break
-    default break
+    _ case break
   end
 end
 

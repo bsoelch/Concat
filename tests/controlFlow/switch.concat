@@ -3,34 +3,30 @@ union( _ : A _ : B i32 : C char8 : D ) =:: anUnion
 
 proc( i32 : i anUnion : e char8 : c -> ) =>: switchTest
   i switch
-    1 2 case
-      return ## not needed when branch ends with return
-    3 case
-      break
+    1 2 case return ## not needed when branch ends with return
+    3 case break
     0 case
       false if return else break end
-      break
-    -1 case
-      return break ## optional break allowed after return
-    default ## the last branch does not need a break
+    break
+    -1 case return break ## optional break allowed after return
+    _ case ## the last branch does not need a break
   end
   e switch
-    A B case
-      break
+    A B case break
     C case
       e ..raw .C io.println
-      break
+    break
     D case
       e ..raw .D io.println
-      break
+    break
   end
   c switch ## switch character
   ' ' '\n' '\t' '\v' '\f' '\r' case
     true
-    break
-  default
+  break
+  _ case
     false
-    break
+  break
   end =:: isSpace
   isSpace io.println
 end

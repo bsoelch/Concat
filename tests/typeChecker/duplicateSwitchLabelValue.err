@@ -1,0 +1,1 @@
+duplicate label 65535 in switch-case ( previous occurence at ./tests/typeChecker/duplicateSwitchLabelValue.concat:3:5 ) at ./tests/typeChecker/duplicateSwitchLabelValue.concat:4:5

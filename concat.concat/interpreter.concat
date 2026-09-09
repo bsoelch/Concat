@@ -789,7 +789,7 @@ namespace: interpreter
           arrayData mixedArena.copyMutableSlice =:: tmpArray
         allocator =[]
         tmpArray slice.freeze constContext newArray64Const return
-      default ..unreachable
+      _ case ..unreachable
     end ConstValue slice.mut cast =:: dataArray
     allocator []
       dataArray mixedArena.copyMutableSlice =:: tmpArray
@@ -807,7 +807,7 @@ namespace: interpreter
         LocalValue .case ConstValue ptr.mut cast [] break
         LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
           elt eltType allocator program copyLocalArray break
-        default elt break
+        _ case elt break
       end tmpArray i slice.set
     end
     ## TODO find a way to avoid recreation of identical constants
@@ -881,7 +881,7 @@ namespace: interpreter
         localAddress LocalSlice64 cast ConstValue .LocalArray64
         return
       ## TODO? replace union element by local copy
-      default
+      _ case
         context [] .localMemory
           value mixedArena.copyValue =:: localAddress
         context .localMemory=
@@ -1003,7 +1003,7 @@ namespace: interpreter
       ## TODO? support generic args
       ## TODO? support floats?
       ## TODO? support primitive values
-      default false return
+      _ case false return
     end =:: intValue
     intValue T cast arrayData 0 slice.set
     true return
@@ -1624,7 +1624,7 @@ proc(
               localOffset mixedArena.reset
             context .localMemory=
             break
-          default break ## nothing to copy
+          _ case break ## nothing to copy
         end
       end
       EvalResult .Ok return
@@ -2154,7 +2154,7 @@ namespace: interpreter
             LocalArray LocalArray8 LocalArray16 LocalArray32 LocalArray64 case
               localVal valType context .localMemory program copyLocalArray
               break
-            .default break
+            _ .case break
           end
         end
         outValInfo [] .valueType valType types.typeEquals ! if

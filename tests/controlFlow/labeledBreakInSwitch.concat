@@ -5,7 +5,6 @@ proc( -> ) =>: main
   while: loop true do
     getVal switch
       5 case break.loop
-    default
-    end
+    _ case end
   end
 end

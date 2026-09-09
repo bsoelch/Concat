@@ -18,7 +18,7 @@ proc( char8 -> bool ) =>: check
       break
     'q' case
       break
-    default
+    _ case
       false return
   end
   true return

@@ -14,7 +14,7 @@ proc( -> ) =>: main
       0 1 case continue.loop
       2 3 4 case break
       5 case break.loop
-      default return
+      _ case return
     end
   finally i 1 + end ..drop
   x f

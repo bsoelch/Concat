@@ -374,7 +374,7 @@ proc( AndOrBlockData : andOrBlock BlockType : mergeWith FilePosition ptr : pos P
         blockData .jumpDistance=
         mergeWith .DO if BlockType .OR_DO else BlockType .OR_IF end
       break
-      default
+      _ case
         "operations and blocks are out of sync, expected and/or got " sb.copyPtr
           blockData [] .blockType sb.appendBlockType
         pos errors appendError
@@ -1243,7 +1243,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockName state peekBlock optional.unwrap .blockName=
       BlockType .SWITCH blockName blockPos preOpNamedBlock state appendOp
       return
-    ## TODO? remember if switch contains .case / .default
+    ## TODO? remember if switch contains .case
     else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
       fileState program wordPos =:: blockPos
       state peekBlock .and .blockData .Switch .if =:: switchData
@@ -1268,9 +1268,10 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         "'case' is only allowed in switch-blocks" sb.copyPtr blockPos errors appendError
         return
       end
-    ## TODO? merge with `case`
     else $ "default":s string.eq or $ ".default":s string.eq _if =:: opName
       fileState program wordPos =:: blockPos
+      "'default' is deprecated use `_ case` instead" sb.copyPtr
+      blockPos errors appendWarning
       state peekBlock .and .blockData .Switch .if =:: switchData
         switchData .state .DEFAULT if
           "unexpected 'default' statement, switch-block already has a 'default' branch" sb.copyPtr
@@ -1443,7 +1444,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             switchData .breakPositions list.asSlice blockPos state setBlockJumps
             switchData .prevCasePosition blockPos state setBlockJump
             switchData .switchPosition blockPos state setBlockJump
-            ## allow switch without default (behavior depends on switched type)
             BlockType .SWITCH blockPos preOpEndBlock  state appendOp
             switchData .breakPositions list.free ..drop
           break
@@ -1548,7 +1548,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
           end
           BlockType .TYPE_PROC_IN typeBlock .blockType=
         break
-        default
+        _ case
           "unexpected " sb.copyPtr
             opName sb.appendStr
             " statement" sb.appendS
@@ -1660,7 +1660,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         TypeBlock case
           state closedConstBlock
         break
-        default break
+        _ case break
       end
       "unexpected " sb.copyPtr opName sb.appendStr blockPos errors appendError
       return
@@ -1681,7 +1681,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
             Initializer TypeBlock Namespace case
               false inProcedure=
               break.findContainer
-            default break
+            _ case break
           end
         end
       end
@@ -1949,7 +1949,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek .and [] .blockData switch
             If Switch case true break
-            default false break
+            _ case false break
           end do
         state [] .openBlocks
           list.pop ..drop
@@ -2083,7 +2083,7 @@ proc( FileId : includedId file.Error : err FilePosition ptr : pos ParserState pt
     file.Error.PATH_OVERFLOW file.Error.OPEN_MODE file.Error.FILE_NOT_FOUND file.Error.FILE_IS_DIR file.Error.ACCESS_DENIED file.Error.INVALID_FILE case
       "cannot include file \"" sb.copyPtr fileName sb.appendStr '"' sb.appendC pos errors appendError
       FILE_ID_NONE return
-    default
+    _ case
       "error while reading file \"" sb.copyPtr fileName sb.appendStr '"' sb.appendC pos errors appendError
       FILE_ID_NONE return
   end

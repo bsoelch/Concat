@@ -608,7 +608,7 @@ namespace: int
           val free
         break
         ## TODO: special case for bases 8 and 32 ( O(n) conversion )
-        default
+        _ case
           val $1 .length asWritableBuffer
             $ ? =:: inplace
           .if
@@ -648,7 +648,7 @@ namespace: int
           val free
         return
         ## TODO: special case for bases 8 and 32 ( O(n) conversion )
-        default
+        _ case
           val $1 .length asWritableBuffer
             $ ? =:: inplace
           .if
@@ -1268,7 +1268,7 @@ namespace: int
           resData 0 [] i64 cast.u resData 1 [] i64 cast.u i128.create fromU128
             aSign 0 < and bSign 0 < if negate end
           return
-        default "unexpected number of digits" ..panic
+        _ case "unexpected number of digits" ..panic
       end
     end
     a resultDigits asWritableBuffer .else
@@ -1342,7 +1342,7 @@ namespace: int
           resData 0 [] i64 cast.u resData 1 [] i64 cast.u i128.create fromU128
             aSign 0 < or bSign 0 < if negate end
           return
-        default "unexpected number of digits" ..panic
+        _ case "unexpected number of digits" ..panic
       end
     end
     a resultDigits asWritableBuffer .else
@@ -1381,7 +1381,7 @@ namespace: int
           resData 0 [] i64 cast.u  resData 1 [] i64 cast.u i128.create fromU128
             aSign bSign != if negate end
           return
-        default "unexpected number of digits" ..panic
+        _ case "unexpected number of digits" ..panic
       end
     end
     a resultDigits asWritableBuffer .else
@@ -1578,7 +1578,7 @@ namespace: int
         2 case 64 break
         4 case 32 break
         16 case 16 break
-        default "unsupported base" ..panic
+        _ case "unsupported base" ..panic
       end =:: digitCount
       digits $ .length 1 - slice.head slice.reversed for
         i64 cast.u base '0' digitCount iSize cast.u i64.paddedSbAppendU

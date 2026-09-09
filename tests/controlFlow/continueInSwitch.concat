@@ -2,7 +2,7 @@ proc( i32 : n char8 : x -> char8 ) =>: f
   n while $ 0 >= do
     x $ switch
       'x' case ..drop 1 - continue
-      default >$ ..drop return break
+      _ case >$ ..drop return break
     end
   end ..drop
   'X' return

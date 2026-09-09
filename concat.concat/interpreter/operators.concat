@@ -6,7 +6,7 @@ namespace: interpreter
     ConstValue ..length 23:iSize == "no new constants" assert
     a switch
       Bool .case false return
-      default false true return
+      _ case false true return
     end
   end
   proc( ConstValue : a -> i64 bool ) =>: export: constAsInt ## all integer calculations are done in 64 bits
@@ -14,7 +14,7 @@ namespace: interpreter
     a switch
       Char .case i64 cast.u false return
       Int .case i64 cast false return
-      default 0:i64 true return
+      _ case 0:i64 true return
     end
   end
   proc( ConstValue : a -> f64 bool ) =>: export: constAsFloat
@@ -23,14 +23,14 @@ namespace: interpreter
       Char .case i32 cast.u f64 cast false return
       Int .case f64 cast false return
       Float .case f64 cast false return
-      default 0 f64 cast true return
+      _ case 0 f64 cast true return
     end
   end
   proc( ConstValue : a -> Type bool ) =>: export: constAsType
     ConstValue ..length 23:iSize == "no new constants" assert
     a switch
       TypeId .case false return
-      default Type .Undefined true return
+      _ case Type .Undefined true return
     end
   end
 
@@ -59,7 +59,7 @@ namespace: interpreter
       Char case a .Char i8 cast ? ConstValue .Bool OperatorResult .SUCCESS return
       Int case a .Int T cast ? ConstValue .Bool OperatorResult .SUCCESS return
       Float case a .Float T cast ? ConstValue .Bool OperatorResult .SUCCESS return
-      default
+      _ case
         ConstValue .None OperatorResult .ARGUMENT_ERROR return
     end
   end
@@ -774,7 +774,7 @@ namespace: interpreter
             valueType typeContext types.strideOf switch
               Fixed .case
                 intConst + ConstValue .Int OperatorResult .SUCCESS return
-              default
+              _ case
                 "cannot determine size of type: " sb.copyPtr
                   intConst sb.appendI
                 pos errors appendError
@@ -856,7 +856,7 @@ namespace: interpreter
           else
             arrayConst 0 [] i64 cast.u ConstValue .Int
           end OperatorResult .SUCCESS return
-      default
+      _ case
         "unexpected constant for pointer value: " sb.copyPtr
           ptrValue typeContext sb.appendConstant
         pos errors appendError
@@ -876,7 +876,7 @@ namespace: interpreter
       Char .case i64 cast.u break
       Int .case break
       ## XXX? support floats?
-      default false return
+      _ case false return
     end =:: intValue
     intValue T cast arrayData 0 slice.set
     true return
@@ -975,7 +975,7 @@ namespace: interpreter
           OperatorResult .ARGUMENT_ERROR return
         end =:: srcArray
         localArray srcArray pos errors setLocalArray return
-      default
+      _ case
         "unexpected target for setValue, expected writable memory location got: " sb.copyPtr
           targetValue typeContext sb.appendConstant
         pos errors appendError
@@ -1064,7 +1064,7 @@ namespace: interpreter
         aVals .data bVals .data == and
           aVals .length bVals .length ==
         end false return
-      default ## unexpected type for pointer
+      _ case ## unexpected type for pointer
         false true return
     end
   end
@@ -1170,7 +1170,7 @@ namespace: interpreter
         srcArray .length
         i64 ..types.stride
         false return
-      default 0 i8 ptr.raw cast! 0:iSize 0:iSize true return
+      _ case 0 i8 ptr.raw cast! 0:iSize 0:iSize true return
     end
   end
   proc(
@@ -1198,7 +1198,7 @@ namespace: interpreter
         srcArray .length
         i64 ..types.stride
         false return
-      default 0 i8 ptr.raw.mut cast! 0:iSize 0:iSize true return
+      _ case 0 i8 ptr.raw.mut cast! 0:iSize 0:iSize true return
     end
   end
   proc(

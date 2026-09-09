@@ -778,7 +778,7 @@ namespace: sb
           Array32 .case .length 0:iSize == break
           Array64 .case .length 0:iSize == break
           Array   .case .length 0:iSize == break
-          default false break
+          _ case false break
         end if ## zero length array as primitive type
       0 types.ArraySize .Int =:: size
       ## newArrayType
@@ -2224,7 +2224,7 @@ proc(
         CONCAT_ENVP_NAME sb.appendS
         '\n' sb.appendC
       return
-    default
+    _ case
       "unsupported built-in: " sb.copyPtr
         builtIn sb.appendBuiltIn
       pos errors appendError

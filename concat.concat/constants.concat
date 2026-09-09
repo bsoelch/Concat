@@ -334,7 +334,7 @@ namespace: constant
               elts .data elts .length mem.clear ..drop
               elts slice.freeze ConstValue .Array64
             return
-            default "unexpected size for primitive" ..panic
+            _ case "unexpected size for primitive" ..panic
           end
         else
           count 0 == if
@@ -731,7 +731,7 @@ namespace: constants
             finally j 1:iSize + end ..drop
             i nChars 1:iSize - + i=
             continue
-          default
+          _ case
             "unknown escape sequence \"\\" sb.copyPtr
               $1 sb.appendC
               '\"' sb.appendC

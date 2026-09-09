@@ -2399,9 +2399,8 @@ proc(
           false switchBlock .allowBreak=
           true return
         end
-        break
-      default
-        break
+      break
+      _ case break
     end
   else .BlockEnd ? _if
     false return
@@ -2874,15 +2873,15 @@ proc(
       op .val switch
         Block .case .blockType switch
           AND AND_IF AND_DO OR OR_IF OR_DO case continue.opLoop
-          default break
+          _ case break
         end break
         BlockEnd .case .blockType switch
           AND OR case ## only close and-or if top-block is and-or
             state peekBlock .and .AndOr ? if break else continue.opLoop end
           break
-          default break
+          _ case break
         end break
-        default continue.opLoop
+        _ case continue.opLoop
       end
     end
     ## resolve names
@@ -2984,7 +2983,7 @@ proc(
           continue.opLoop
         end [] .codeState switch
           Parsed PreTypeChecking .case break
-          default
+          _ case
             "unexpected state for nested procedure":s op ..line state internalError ..unreachable
           continue.opLoop
         end =:: procOps
@@ -3643,7 +3642,7 @@ proc(
               program .tmpString=
              break
              Array8 .case string.fromBytes break
-             .default
+             _ .case
                "unsupported value for element-location: " sb.copyPtr
                  >$ typeContext sb.appendConstant
                op .pos errors appendError
@@ -3819,7 +3818,7 @@ proc(
                   I16 case BuiltIn .EQ_I16 break
                   I32 case BuiltIn .EQ_I32 break
                   I64 case BuiltIn .EQ_I64 break
-                  default
+                  _ case
                     "unexpected primitive for enum-label":s
                       op ..line state
                     internalError ..unreachable
@@ -4131,7 +4130,7 @@ proc(
                 TYPE_UNTAGGED_UNION case CompositeType .RAW_UNION break
                 TYPE_PROC_IN case CompositeType .PROC break
                 TYPE_CPROC_IN case CompositeType .C_PROC break
-                default ..unreachable
+                _ case ..unreachable
               end
             op .pos state typeCheckCompositeType
             opIndex
@@ -5046,7 +5045,7 @@ proc(
               elt .val switch
                 GetName .case break
                 ## NestedProc .case =:: procId break
-                default
+                _ case
                   "unsupported operation in overload block: " sb.copyPtr
                     elt program sb.appendPreOp
                   op .pos errors appendError
@@ -5862,18 +5861,17 @@ proc(
             state popValue .else ..drop
               "expected constant" sb.copyPtr op .pos errors appendError
                continue.opLoop
-            end =:: constVal
-            constVal switch
+            end switch
               TypeId .case optional.wrap baseType0= break
               Int .case types.ArraySize .Int list.append break
               GenericArg .case types.ArraySize .GenericArg list.append break
               WildCard .case
                 "unimplemented: dynamic pointers":s op ..line state internalError ..unreachable
-              default ## TODO? .default to access switched value
+              _ .case
                 "unexpected constant parameter for type-modifier " sb.copyPtr
                   typeMod sb.appendTypeModifier
                   " expected type or size got " sb.appendS
-                  constVal typeContext sb.appendConstant
+                  >$ typeContext sb.appendConstant
                 op .pos errors appendError
               break
             end

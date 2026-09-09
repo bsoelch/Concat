@@ -28,19 +28,19 @@ namespace: LIROp
     proc( ValType -> bool ) =>: export: isInt
       switch
         I8 I16 I32 I64 case true return
-        default false return
+        _ case false return
       end
     end
     proc( ValType -> bool ) =>: export: isFloat
       switch
         F16 F32 F64 case true return
-        default false return
+        _ case false return
       end
     end
     proc( ValType -> bool ) =>: export: isPointer
       switch
         PTR FPTR case true return
-        default false return
+        _ case false return
       end
     end
     proc( ValType ValType -> ValType optional ) =>: export: mergeUnionElt
@@ -51,7 +51,7 @@ namespace: LIROp
         2 case ValType .I16 optional.wrap return
         4 case ValType .I32 optional.wrap return
         8 case ValType .I64 optional.wrap return
-        default { } return
+        _ case { } return
       end
     end
     proc( ValType ValType -> bool ) =>: export: eq
@@ -233,7 +233,7 @@ namespace: LIROp.new
       Procedure .case >>$ ..drop
         <$ lirProcConst
       return
-      .default
+      _ .case
         "unsupported constant for ValType " sb.copyPtr
           >>>$ ValType.sbAppend
           ": ":s sb.appendStr

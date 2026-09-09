@@ -174,7 +174,7 @@ namespace: number
         base 10 > base 34 < & return
       '#' case
         true return
-      default
+      _ case
         false return
     end
   end

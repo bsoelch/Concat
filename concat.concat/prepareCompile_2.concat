@@ -79,7 +79,7 @@ namespace: StackValue
       3 case
         slotsA 0 [] slotsA 1 [] slotsA 2 [] ( ValType ValType ValType ) new
       StackValue .Val3 return
-      default StackValue .Reference return
+      _ case StackValue .Reference return
     end
   end
   proc( ValType list StackValue -> ValType list ) =>: listAppend
@@ -374,7 +374,7 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
       3 case
         $ 0 [] $1 1 [] >>$ 2 [] ( ValType ValType ValType ) new StackValue .Val3
       return
-      default ..drop
+      _ case ..drop
         StackValue .Reference return
       break
     end
@@ -497,7 +497,7 @@ proc( LIROp list ElementSlotInfo StackValue FilePosition ptr : pos ConverterCont
           3 case ## <v1> <v2> <v3> <0> <1> <2> -- <v1> <v2> <v3>
             3 pos context dropSlots return
           return
-          default ..unreachable
+          _ case ..unreachable
         end
       else $ .start 1 == _if ## count is 1 or 2
         .count switch
@@ -510,7 +510,7 @@ proc( LIROp list ElementSlotInfo StackValue FilePosition ptr : pos ConverterCont
             2 pos context dropSlots ## <v1> <v2> <0>
             -2 pos context rotateSlots ## <0> <v1> <v2>
           return
-          default ..unreachable
+          _ case ..unreachable
         end
       else $ .start 2 == _if ## <v> <0> <1> <2> -- <0> <1> <v>
         .count 1 == "count is 1" assert ## count = 0 already handled, count > 1 excluded
@@ -709,7 +709,7 @@ proc(
     UGT_I8 UGT_I16 UGT_I32 UGT_I64 case
       CompareType .UGT pos context compileBinaryCompare
     break
-    .default
+    _ .case
       "unsupported builtIn: " sb.copyPtr
         >$ sb.appendBuiltIn
       pos program .errors appendError
@@ -1093,7 +1093,7 @@ proc(
             1 case eltCount op .pos lirRotate list.append return
             2 case eltCount op .pos lirRotate2 list.append return
             3 case eltCount op .pos lirRotate3 list.append return
-            default "unxpected slot-count for value" ..panic
+            _ case "unxpected slot-count for value" ..panic
           end
         break
       end
