@@ -69,7 +69,7 @@ struct(
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
   SwitchId : switchId
-  IdentifierInfo : srcVar
+  IdentifierInfo optional : srcVar
   bool : inLabel
   bool : allowBreak
   bool : hasDefault
@@ -125,7 +125,7 @@ proc(
   Type : switchType
   Type : switchBaseType
   branchTree.NodeId : branchRoot
-  IdentifierInfo : srcVar
+  IdentifierInfo optional : srcVar
   NameId optional : blockName
   SwitchId : switchId
   FilePosition ptr : pos
@@ -4476,6 +4476,24 @@ proc(
                 switchType typeContext sb.appendType
               op .pos errors appendError
             end
+            blockType .DOT_SWITCH if
+              ## create tmp-var if switch uses `.case`
+              switchType id.FLAG_NONE op .pos idContext id.newTmpVar
+                _VAL_TYPES_ if ## !!! replace tmp-var with boolean at once switching to val-types
+                  ## duplicate top stack value
+                  state .stack branchTree.peek <unwrap>
+                  ## pushValue
+                    $ [] .valueType
+                    >$ [] .value
+                    0 StackModType .COPY op .pos opStackMod
+                  state pushValue
+                else
+                  0 StackModType .COPY op .pos opStackMod state appendOp ..drop
+                  switchType $1 op .pos opDeclareId state appendOp ..drop
+                  switchType $1 op .pos opSetId state appendOp ..drop
+                end
+              optional.wrap
+            else { } end =:: srcVar
             ## requireTypes
               switchType@ slice.wrap
               "switch value":s
@@ -4484,11 +4502,6 @@ proc(
             state requireTypes .Err ? if
               continue.opLoop
             end
-            ## TODO? only create tmp-var if switch uses `.case`
-            0 StackModType .COPY op .pos opStackMod state appendOp ..drop
-            switchType id.FLAG_NONE op .pos idContext id.newTmpVar =:: srcVar
-            switchType srcVar op .pos opDeclareId state appendOp ..drop
-            switchType srcVar op .pos opSetId state appendOp ..drop
             switchType
               $ typeContext types.getPointerBaseType .if
                 >$ ..drop
@@ -4603,64 +4616,74 @@ proc(
             end LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
             switchBlock [] .switchBaseType =:: switchBaseType
-            blockType .DOT_CASE and switchData [] .isDefaultBranch ! if
-              switchType typeContext types.isUnion if
-                prev? .and [] .value .Int .else
-                  continue.opLoop
-                end i32 cast.u =:: eltIndex
-                switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
-                rawSwitchType eltIndex typeContext types.compositeGetElement .else
-                  "missing union element":s op ..line state internalError ..unreachable
-                end =:: labelType
-                switchData [] .switchLabels list.reversed for  =:: label
-                  ## labels in current case are all at end of label list
-                  label .caseId iSize cast.u currentCaseId u< if break end
-                  rawSwitchType label .value .Int .else
-                    "expected int-constant":s op ..line state internalError ..unreachable
-                  end i32 cast.u typeContext types.compositeGetElement .else
-                    "missing union element":s op ..line state internalError ..unreachable
-                  end =:: newType
-                  newType labelType types.typeEquals if continue end
-                  "incompatible types for case-values: " sb.copyPtr
-                    labelType typeContext sb.appendType
-                    " and " sb.appendS
-                    newType typeContext sb.appendType
-                    op .pos errors
-                  newType typeContext types.unwrapNamed labelType typeContext types.unwrapNamed types.typeEquals if
-                    appendWarning
-                  else
-                    appendError
-                  end
+            blockType .DOT_CASE if
+              switchData [] .isDefaultBranch if
+                _VAL_TYPES_ ! if
+                  ## pushValue
+                    switchBaseType
+                    ConstValue .None
+                    switchBaseType switchBlock [] .srcVar <unwrap> op .pos opGetId
+                  state pushValue
                 end
-                switchBaseType switchBlock [] .srcVar op .pos opGetId state appendOp ..drop
-                switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
-                ## pushValue
-                  labelType
-                    switchBaseType typeContext types.isPointer if
-                      switchBaseType typeContext types.isMutable typeContext types.getAddressType
-                    end
-                  ConstValue .None
-                  rawSwitchType
-                    switchBaseType typeContext types.isPointer if
-                      switchBaseType typeContext types.isMutable typeContext types.getAddressType
-                    end
-                    eltIndex
-                    op .pos
-                  opGetElement
-                state pushValue
               else
-                128 sb.create
-                  blockType sb.appendBlockType
-                  " is only supported for unions got: " sb.appendS
-                  switchType typeContext sb.appendType
-                op .pos errors appendError
+                switchType typeContext types.isUnion if
+                  prev? .and [] .value .Int .else
+                    continue.opLoop
+                  end i32 cast.u =:: eltIndex
+                  switchType typeContext types.asRawUnion optional.unwrap =:: rawSwitchType
+                  rawSwitchType eltIndex typeContext types.compositeGetElement .else
+                    "missing union element":s op ..line state internalError ..unreachable
+                  end =:: labelType
+                  switchData [] .switchLabels list.reversed for  =:: label
+                    ## labels in current case are all at end of label list
+                    label .caseId iSize cast.u currentCaseId u< if break end
+                    rawSwitchType label .value .Int .else
+                      "expected int-constant":s op ..line state internalError ..unreachable
+                    end i32 cast.u typeContext types.compositeGetElement .else
+                      "missing union element":s op ..line state internalError ..unreachable
+                    end =:: newType
+                    newType labelType types.typeEquals if continue end
+                    "incompatible types for case-values: " sb.copyPtr
+                      labelType typeContext sb.appendType
+                      " and " sb.appendS
+                      newType typeContext sb.appendType
+                      op .pos errors
+                    newType typeContext types.unwrapNamed labelType typeContext types.unwrapNamed types.typeEquals if
+                      appendWarning
+                    else
+                      appendError
+                    end
+                  end
+                  _VAL_TYPES_ ! if
+                    switchBaseType switchBlock [] .srcVar <unwrap> op .pos opGetId state appendOp ..drop
+                  else
+                    state .stack branchTree.pop ..drop ## drop old value
+                  end
+                  switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
+                  ## pushValue
+                    labelType
+                      switchBaseType typeContext types.isPointer if
+                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                      end
+                    ConstValue .None
+                    rawSwitchType
+                      switchBaseType typeContext types.isPointer if
+                        switchBaseType typeContext types.isMutable typeContext types.getAddressType
+                      end
+                      eltIndex
+                      op .pos
+                    opGetElement
+                  state pushValue
+                else
+                  128 sb.create
+                    blockType sb.appendBlockType
+                    " is only supported for unions got: " sb.appendS
+                    switchType typeContext sb.appendType
+                  op .pos errors appendError
+                end
               end
-            else blockType .DOT_CASE and switchData [] .isDefaultBranch _if
-              ## pushValue
-                switchBaseType
-                ConstValue .None
-                switchBaseType switchBlock [] .srcVar op .pos opGetId
-              state pushValue
+            else _VAL_TYPES_ and switchBlock [] .srcVar ? _if
+              1 op .pos state discardValues
             end
             true switchBlock .allowBreak=
             continue.opLoop
