@@ -330,6 +330,9 @@ proc( Type FilePosition ptr : pos ProgramContext ptr.mut : program -> StackValue
       F64 case ValType .F64 break
       TYPE case ValType .PTR break
     end StackValue .Value return
+  else .CType ._if
+    ## TODO? special ValTypes for c-types to allow platform indepenent C-backend
+    types.cTypeAsType pos program toValTypes return
   else $ typeContext types.isCallable _if ..drop
     ValType .FPTR StackValue .Value return
   else $ typeContext types.isPointer _if ..drop
@@ -570,7 +573,7 @@ proc( LIROp list
       end []
     $1 $1 StackValue.eq if ..drop.2 continue end
     ## TODO: try decaying stack value
-    "stack values out of sync: " sb.copyPtr
+    "stack values out of sync: expected " sb.copyPtr
       >>$ StackValue.sbAppend
       " got ":s sb.appendStr
       >$ StackValue.sbAppend
