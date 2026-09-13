@@ -920,6 +920,26 @@ proc( TmpVarInfo : varInfo ParserState ptr.mut : state FilePosition ptr : pos ->
   "..if.elseVal":s pos preOpGetName state appendOp
 end
 
+proc(
+  BlockType #+newBlockType+#
+  iSize #+blockStart+#
+  FilePosition ptr : pos
+  ParserState ptr.mut : state
+-> ) =>: updateBlockType
+ state findOp .if =:: oldOp
+    oldOp .val .Block .if
+      .blockType=
+    else ..drop.2
+      state [] .program =:: program
+      "blocks and operations out of sync expected start of composite type got: " sb.copyPtr
+        oldOp [] program sb.appendPreOp
+      pos program .errors appendError
+    end
+  else ..drop
+    "block-start operation does not exist" ..panic
+  end
+end
+
 proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr.mut : state -> string ) =>: parseOperation
   state [] .program =:: program
   program .errors =:: errors
@@ -1243,7 +1263,6 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       blockName state peekBlock optional.unwrap .blockName=
       BlockType .SWITCH blockName blockPos preOpNamedBlock state appendOp
       return
-    ## TODO? remember if switch contains .case
     else $ "case":s string.eq or $ ".case":s string.eq _if =:: opName
       fileState program wordPos =:: blockPos
       state peekBlock .and .blockData .Switch .if =:: switchData
@@ -1256,6 +1275,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
         switchData [] .prevCasePosition blockPos state setBlockJump
         state opCount switchData .prevCasePosition=
         opName 0 string.charAt '.' == if
+          BlockType .DOT_SWITCH switchData [] .switchPosition blockPos state updateBlockType
           BlockType .DOT_CASE
         else
           BlockType .CASE
@@ -1511,17 +1531,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       typeBlock [] .blockType switch
         TYPE_PROC_IN TYPE_CPROC_IN case break
         TYPE_COMPOSITE case
-          typeBlock [] .blockStart state findOp .if =:: oldOp
-            oldOp .val .Block .and .blockType =:: blockType
-                blockType [] .TYPE_COMPOSITE if
-              BlockType .TYPE_PROC_IN blockType =[]
-            else
-              "blocks and operations out of sync expected start of composite type got: " sb.copyPtr
-                oldOp [] program sb.appendPreOp
-              blockPos errors appendError
-              return
-            end
-          end
+          BlockType .TYPE_PROC_IN typeBlock [] .blockStart blockPos state updateBlockType
           BlockType .TYPE_PROC_IN typeBlock .blockType=
         break
         _ case
@@ -1648,7 +1658,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       state [] .constBlockCount 0 != =:: mut: inConstBlock
       inProcedure and inConstBlock if
         ## ensure only the innermost proc/constant is active
-        BlockType ..length 32:iSize == "no new block types" assert
+        BlockType ..length 33:iSize == "no new block types" assert
         state [] .openBlocks list.reversed for: findContainer =:: b
           b .blockData switch
             Procedure case
@@ -1921,7 +1931,7 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       return
     else $ "..compiler.return":s string.eq _if ..drop
       ..drop ## discard remainder of file
-      BlockType ..length 32:iSize == "no new block types" assert
+      BlockType ..length 33:iSize == "no new block types" assert
       ## close open if-blocks/switch-branches
       while state [] .openBlocks list.peek .and [] .blockData switch
             If Switch case true break

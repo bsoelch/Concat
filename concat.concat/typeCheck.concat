@@ -4453,7 +4453,7 @@ proc(
               branchPoints list.free ..drop
             end
             continue.opLoop
-          SWITCH case
+          SWITCH DOT_SWITCH case
             state [] .reachable ! if
               ## skip block if start is unreachable
               opIndex
@@ -5244,7 +5244,7 @@ proc(
             nBranches 0 > state .reachable=
             continue.opLoop
           IF case break ## end-if should not be created by parser
-          SWITCH case
+          SWITCH DOT_SWITCH case
             ## break current branch
             op .pos state endSwitchBranch
             op .pos state closeBlock .Switch .else

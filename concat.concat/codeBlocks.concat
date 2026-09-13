@@ -17,7 +17,7 @@ enum(
   BREAK
   CONTINUE
   FINALLY
-  SWITCH
+  SWITCH DOT_SWITCH
   CASE DOT_CASE
   AND
   OR
@@ -78,6 +78,9 @@ namespace: sb
         return
       SWITCH case
         "switch":s sb.appendStr
+        return
+      DOT_SWITCH case
+        "switch (.case)":s sb.appendStr
         return
       CASE case
         "case":s sb.appendStr
