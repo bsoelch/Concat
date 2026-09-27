@@ -437,7 +437,7 @@ proc(
   asm.Value : src
   CompilerContext ptr.mut : context
 -> asm.Atom list ) =>: opMove
-  context .asmContext .targetId switch
+  context .asmContext [] .targetId switch
     AMD64 case
       moveType ValType.isInt if
         AMD64.op.MOV
@@ -574,7 +574,7 @@ proc(
     pos context [] .program .errors appendError
     return
   end
-  context .asmContext .targetId switch
+  context .asmContext [] .targetId switch
     AMD64 case
       argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
       ## TODO: prefer arg1 as dst if register is available
@@ -614,7 +614,7 @@ proc(
     pos context [] .program .errors appendError
     return
   end
-  context .asmContext .targetId switch
+  context .asmContext [] .targetId switch
     AMD64 case
       opType switch
         ADD SUB MUL AND OR XOR case
@@ -669,7 +669,7 @@ proc(
     pos context [] .program .errors appendError
     return
   end
-  context .asmContext .targetId switch
+  context .asmContext [] .targetId switch
     AMD64 case
       argType pos context amd64GetBinOpArgs =:: arg2 =:: arg1
       ValType .BOOL context nextFreeRegister =:: dst
