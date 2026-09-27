@@ -728,34 +728,6 @@ namespace: id
     false return
   end
   proc(
-    Type : itrType
-    IdentifierFlag : flags
-    FilePosition ptr : pos
-    IdentifierContext ptr.mut : context
-  -> IdentifierInfo ) =>: export: newTmpVar
-    ## newTmpIdentifier
-      flags
-      pos
-    context .typeContext .nameContext newTmpIdentifier =:: idName
-    ## IdentifierInfo
-      idName
-      IdentifierType .TMP_VAR false
-    IdentifierInfo new =:: idInfo
-    context .identifierData
-      idName
-      ## IdentifierData
-        itrType
-        ConstValue .None
-        pos
-        idName
-        -1
-        IdentifierType .TMP_VAR
-        false
-      IdentifierData new
-    map.put ? ! "each itr-var has an unique id" assert
-    idInfo return
-  end
-  proc(
     NameId : nameId
     Type : varType
     FilePosition ptr : pos

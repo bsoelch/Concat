@@ -1098,6 +1098,9 @@ namespace: types
       _ case Type optional.empty return
     end
   end
+  proc( Type TypeContext ptr -> Type ) =>: export: unwrapPointer
+    $1 >$ getPointerBaseType .if >$ ..drop end
+  end
   proc( Type -> bool ) =>: export: isArray0
     .ArrayType ? return
   end

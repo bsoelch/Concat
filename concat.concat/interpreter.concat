@@ -1153,14 +1153,14 @@ proc(
       end
     break
     Switch .case =:: switchId
-      op [] .pos context popValue if ..drop.2
+      context [] .stack list.peek .else
         "stack underflow while evaluating operation: " sb.copyPtr
           op [] program sb.appendOp
         op [] .pos errors appendError
         EvalResult .Error return
-      end
+      end []
         $ .Union ? if constUnionTag end
-      =:: switchValue ..drop
+      =:: switchValue
       switchId SwitchId.getSwitchData =:: switchData
       switchData [] .switchType =:: switchType
       switchData [] .switchLabels .length for =:: i

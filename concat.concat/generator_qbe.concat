@@ -3560,7 +3560,9 @@ proc(
         op [] .pos sb.appendPosQBE
         ## appendSwitchTable
           switchData [] .switchType
-          op [] .pos context popValue
+          context .stackInfo branchTree.peek .if [] .valueId else
+            ValueId .None
+          end
           switchData [] .switchLabels
           switchData [] .branchLabels
           switchData [] .defaultLabel

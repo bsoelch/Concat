@@ -69,7 +69,7 @@ struct(
   LocalLabelId list : caseLabels
   LocalLabelId : endLabel
   SwitchId : switchId
-  IdentifierInfo optional : srcVar
+  bool : isDotSwitch
   bool : inLabel
   bool : allowBreak
   bool : hasDefault
@@ -125,7 +125,7 @@ proc(
   Type : switchType
   Type : switchBaseType
   branchTree.NodeId : branchRoot
-  IdentifierInfo optional : srcVar
+  bool : isDotSwitch
   NameId optional : blockName
   SwitchId : switchId
   FilePosition ptr : pos
@@ -142,7 +142,7 @@ proc(
     16 LocalLabelId list.create
     switchId SwitchId.getSwitchData [] .endLabel
     switchId
-    srcVar
+    isDotSwitch
     true
     false
     false
@@ -4471,42 +4471,34 @@ proc(
             switchType typeContext types.isIntOrChar ! and
                 switchType typeContext types.isEnumOrTaggedUnion ! and
                 switchType typeContext types.getPointerBaseType ! .or
-                typeContext types.isEnumOrTaggedUnion ! if
+                typeContext types.isTaggedOrComputedUnion ! if
               "cannot switch values of type " sb.copyPtr
                 switchType typeContext sb.appendType
               op .pos errors appendError
             end
-            blockType .DOT_SWITCH if
-              ## create tmp-var if switch uses `.case`
-              switchType id.FLAG_NONE op .pos idContext id.newTmpVar
-                _VAL_TYPES_ if ## !!! replace tmp-var with boolean at once switching to val-types
-                  ## duplicate top stack value
-                  state .stack branchTree.peek <unwrap>
-                  ## pushValue
-                    $ [] .valueType
-                    >$ [] .value
-                    0 StackModType .COPY op .pos opStackMod
-                  state pushValue
-                else
-                  0 StackModType .COPY op .pos opStackMod state appendOp ..drop
-                  switchType $1 op .pos opDeclareId state appendOp ..drop
-                  switchType $1 op .pos opSetId state appendOp ..drop
-                end
-              optional.wrap
-            else { } end =:: srcVar
-            ## requireTypes
-              switchType@ slice.wrap
-              "switch value":s
-              0 false
-              op .pos
-            state requireTypes .Err ? if
-              continue.opLoop
-            end
             switchType
-              $ typeContext types.getPointerBaseType .if
-                >$ ..drop
+              typeContext types.unwrapPointer
+            =:: switchValueType
+            blockType .DOT_SWITCH and switchValueType typeContext types.isUnion if
+              ## duplicate top stack value
+              state .stack branchTree.peek <unwrap>
+              ## pushValue
+                $ [] .valueType
+                >$ [] .value
+                0 StackModType .COPY op .pos opStackMod
+              state pushValue
+            end
+            state .stack branchTree.peek .and =:: switchVal
+                switchVal [] .valueType switchType types.typeEquals ! if
+              switchVal [] switchType SignType .NONE state castConstant if
+                "failed to cast switch constant expected " sb.copyPtr
+                  switchType typeContext sb.appendType
+                  " got ":s sb.appendStr
+                  switchVal [] .valueType typeContext sb.appendType
+                op .pos errors appendError
               end
-            $ =:: switchValueType
+            end
+            switchValueType
               $ typeContext types.isTaggedUnion if
                 switchType types.UNION_TAG_INDEX op .pos opGetElement state appendOp ..drop
               else $ typeContext types.isComputedUnion _if
@@ -4549,7 +4541,7 @@ proc(
               switchValueType
               switchType
               switchBranch
-              srcVar
+              blockType .DOT_SWITCH
               blockInfo .blockName
               switchId
               op .pos
@@ -4616,16 +4608,12 @@ proc(
             end LocalLabelType .LABEL_END op .pos state localLabel
             true state .reachable=
             switchBlock [] .switchBaseType =:: switchBaseType
+            switchBlock [] .isDotSwitch and
+                switchBlock [] .switchType typeContext types.isUnion if
+              1 op .pos state discardValues ## discard switch-value
+            end
             blockType .DOT_CASE if
-              switchData [] .isDefaultBranch if
-                _VAL_TYPES_ ! if
-                  ## pushValue
-                    switchBaseType
-                    ConstValue .None
-                    switchBaseType switchBlock [] .srcVar <unwrap> op .pos opGetId
-                  state pushValue
-                end
-              else
+              switchData [] .isDefaultBranch ! if
                 switchType typeContext types.isUnion if
                   prev? .and [] .value .Int .else
                     continue.opLoop
@@ -4654,11 +4642,7 @@ proc(
                       appendError
                     end
                   end
-                  _VAL_TYPES_ ! if
-                    switchBaseType switchBlock [] .srcVar <unwrap> op .pos opGetId state appendOp ..drop
-                  else
-                    state .stack branchTree.pop ..drop ## drop old value
-                  end
+                  state .stack branchTree.pop ..drop ## drop old value
                   switchBaseType types.UNION_VALUE_INDEX op .pos opGetElement state appendOp ..drop
                   ## pushValue
                     labelType
@@ -4682,7 +4666,7 @@ proc(
                   op .pos errors appendError
                 end
               end
-            else _VAL_TYPES_ and switchBlock [] .srcVar ? _if
+            else ## discard switch-(base-)value
               1 op .pos state discardValues
             end
             true switchBlock .allowBreak=
@@ -5286,6 +5270,10 @@ proc(
             switchData [] .switchLabels switchLabelCmp@ program list.sort switchData .switchLabels=
             switchBlock .hasDefault ! if
               switchData [] .defaultLabel LocalLabelType .LABEL_END op .pos state localLabel
+              switchBlock .isDotSwitch and
+                  switchBlock .switchType typeContext types.isUnion if
+                2
+              else 1 end op .pos state discardValues
               switchBlock .switchType typeContext types.isEnumOrTaggedUnion if
                 switchBlock .switchType
                   $ typeContext types.isTaggedOrComputedUnion if
@@ -5326,7 +5314,7 @@ proc(
                 caseBranches
                   ## BranchPoint
                     op .pos
-                    switchBlock .branchRoot
+                    state .stack branchTree.startBranch
                   BranchPoint new list.append
                 caseBranches=
               end
