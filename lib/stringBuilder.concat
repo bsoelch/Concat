@@ -51,11 +51,12 @@ namespace: sb
       str appendS
     return
   end
-  proc( string : str -> stringBuilder ) =>: export: fromStr
+  proc( string : str -> stringBuilder ) =>: export: copyStr
     str .length create
       str appendStr
-    stringBuilder cast  return
+    stringBuilder cast return
   end
+  proc( string : str -> stringBuilder ) : export: alias: fromStr copyStr
   proc( stringBuilder : str iSize : index -> char8 ) =>: export: charAtZ
     str char8 list cast index list.getValue return
   end

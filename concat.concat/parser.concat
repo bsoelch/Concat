@@ -1496,12 +1496,17 @@ proc( string : code Token : token FileState ptr.mut : fileState  ParserState ptr
       BlockType .TYPE_ENUM blockPos state openTypeBlock
       BlockType .TYPE_ENUM blockPos preOpBlock state appendOp
       return
-    ## forward compatability: `proc.c` will be used for proc with c-call convention
-    else $ "proc(":s string.eq or $ "proc.c(":s string.eq _if =:: opName
-      opName .length "proc(":s .length == if
-        BlockType .TYPE_PROC_IN
-      else
+    ## forward compatability: `func` will be used for pure functions
+    else $ "proc(":s string.eq or $ "proc.c(":s string.eq or $ "func(":s string.eq _if =:: opName
+      opName 0 [] 'f' == if
+        opName sb.copyStr
+          " is a reserved keyword for a future version":s sb.appendStr
+        fileState program wordPos errors appendError
+      end
+      opName .length "proc.c(":s .length == if
         BlockType .TYPE_CPROC_IN
+      else
+        BlockType .TYPE_PROC_IN
       end =:: procBlockType
       fileState program wordPos =:: blockPos
       procBlockType blockPos state openTypeBlock
