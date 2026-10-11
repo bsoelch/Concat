@@ -781,6 +781,22 @@ proc(
   "unimplemented: cast" ..panic
 end
 
+proc( LIROp list
+  LocalLabelId
+  CompareType
+  ValType
+  FilePosition ptr
+-> LIROp list ) =>: generateJump
+  ## TODO: decay/remember stack-state
+  lirJump list.append
+end
+proc( LIROp list
+  LocalLabelInfo
+  FilePosition ptr
+-> LIROp list ) =>: generateLabel
+  ## TODO: update/merge/decay stack-state
+  lirLabel list.append
+end
 proc( SwitchData ptr -> i64 ) =>: getLowSwitchBound
  [] .switchLabels 0 [] .value switchLabelAsInt
 end
@@ -799,14 +815,14 @@ proc(
   $1 getLowSwitchBound $ 0 == if ..drop
     0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .UGT switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .UGT switchValType pos generateJump
   else
     <$ 0 pos lirCopy list.append >$
     switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .LT switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .LT switchValType pos generateJump
     0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .GT switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .GT switchValType pos generateJump
   end
 end
 proc(
@@ -820,7 +836,7 @@ proc(
   label .value switchLabelAsInt switchValType pos lirIntConst list.append
   $1 [] .branchLabels
     label .caseId []
-  CompareType .EQ switchValType pos lirJump list.append
+  CompareType .EQ switchValType pos generateJump
 end
 proc(
   SwitchData ptr
@@ -831,10 +847,10 @@ proc(
   ProgramContext ptr.mut : program
 -> SwitchData ptr LIROp list LocalLabelInfo ) =>: generateSwitchSplitJump
   program program.nextLocalLabel <<$
-    $2 LocalLabelType .HINT_START LocalLabelInfo new pos lirLabel list.append
+    $2 LocalLabelType .HINT_START LocalLabelInfo new pos generateLabel
     0 pos lirCopy list.append
     splitIndex switchValType pos lirIntConst list.append
-    $2 CompareType .GE switchValType pos lirJump list.append
+    $2 CompareType .GE switchValType pos generateJump
   >>$ LocalLabelType .LABEL_END LocalLabelInfo new
 end
 enum( VALID CASE4 INVALID ) =:: DenseCaseIdInfoState
@@ -910,7 +926,7 @@ proc(
   ProgramContext ptr.mut : program
 -> SwitchData ptr LIROp list ) =>: generateSwitchJumps
   labels .length 0 == if
-    $1 [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .NONE switchValType pos generateJump
     return
   end
   highBound lowBound - labels .length 1 - i64 cast.u == =:: dense
@@ -926,14 +942,14 @@ proc(
         end
       $1 [] .branchLabels >>>$ []
         CompareType .NONE
-      switchValType pos lirJump list.append
+      switchValType pos generateJump
       return
     end
   end
   labels .length 3 u<= if
     ## small range -> generate direct jumps
     labels for switchValType pos generateSwitchCaseJump end
-    $1 [] .defaultLabel CompareType .NONE switchValType pos lirJump list.append
+    $1 [] .defaultLabel CompareType .NONE switchValType pos generateJump
     return
   end
   ## TODO: if range is dense and table is supported: generate table
@@ -942,7 +958,7 @@ proc(
     $2 switchValType pos program generateSwitchSplitJump <<$
     ## <splitIndex> <splitLabel> <switchData> <elts>
     head lowBound $5 switchValType pos program generateSwitchJumps
-    >>$ pos lirLabel list.append ## <splitIndex> <switchData> <elts>
+    >>$ pos generateLabel ## <splitIndex> <switchData> <elts>
   tail >>>$ highBound switchValType pos program generateSwitchJumps
 end
 proc(
@@ -1487,14 +1503,14 @@ proc(
           ## move mergable operation after start hint
           $ list.peek .and .data .Compare ? if
             list.pop optional.unwrap =:: tmp
-            labelInfo op .pos lirLabel list.append
+            labelInfo op .pos generateLabel
             tmp list.append
             return
           end
         break
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
-      labelInfo op .pos lirLabel list.append
+      labelInfo op .pos generateLabel
     return
     LocalJump .case =:: jumpInfo
       jumpInfo .cmpType .NONE ! if
@@ -1516,7 +1532,7 @@ proc(
             >$ <<<$ ## jmpDst cmpType list cmpOp -- list jmpDst cmpType cmpOp
             mergeJumpIf
           else ValType .BOOL end
-        else ValType .BOOL end op .pos lirJump list.append
+        else ValType .BOOL end op .pos generateJump
     return
     CompilerInfo case return ## TODO? preserve compilerInfo ops
     ConstantReference Error case
