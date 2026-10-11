@@ -438,7 +438,7 @@ namespace: interpreter
           Err .case switch
             Empty case 0 break
             Overflow case
-              chars sb.fromStr
+              chars sb.copyStr
                 " does not fit into a 64-bit integer" sb.appendS
               pos errors appendError
             0 break
@@ -457,25 +457,25 @@ namespace: interpreter
         end
         builtIn .PARSE_I64 if
           overflow if
-            chars sb.fromStr
+            chars sb.copyStr
               " does not fit into a 64-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I32 _if
           overflow or $ i32.MIN i64 cast.s < or $ i32.UMAX i64 cast.u > if
-            chars sb.fromStr
+            chars sb.copyStr
               " does not fit into a 32-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I16 _if
           overflow or $ i16.MIN i64 cast.s < or $ i16.UMAX i64 cast.u > if
-            chars sb.fromStr
+            chars sb.copyStr
               " does not fit into a 16-bit integer" sb.appendS
             pos errors appendWarning
           end
         else builtIn .PARSE_I8 _if
           overflow or $ i8.MIN i64 cast.s < or $ i8.UMAX i64 cast.u > if
-            chars sb.fromStr
+            chars sb.copyStr
               " does not fit into a 8-bit integer" sb.appendS
             pos errors appendWarning
           end
@@ -501,7 +501,7 @@ namespace: interpreter
           Err .case switch
             Empty case 0 break
             Overflow case
-              chars sb.fromStr
+              chars sb.copyStr
                 " does not fit into a 64-bit float" sb.appendS
               pos errors appendError
             0 break

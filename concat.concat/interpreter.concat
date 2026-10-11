@@ -1636,8 +1636,7 @@ proc(
     Error .case =:: errVal
       false op [] .pos context popString if ..drop.2
         EvalResult .Error return
-      end =:: msg ..drop
-      msg sb.fromStr
+      end >$ ..drop sb.copyStr
         context [] .callPositions list.peek .if [] else
           op [] .pos
         end

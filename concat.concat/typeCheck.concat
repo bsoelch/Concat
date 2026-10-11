@@ -5602,7 +5602,7 @@ proc(
           continue.opLoop
         end
         ## appendError
-          op .pos state popString sb.fromStr
+          op .pos state popString sb.copyStr
           ## TODO? append initialization stack for all error messages
           state [] .initializationStack .length 0:iSize != if
             "\n  caused by initializing code at " sb.appendS

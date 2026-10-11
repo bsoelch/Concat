@@ -19,7 +19,7 @@ namespace: exec
     ## ExecContext
       16 i32 list.create
         0 list.append
-      command sb.fromStr
+      command sb.copyStr
         '\x00' sb.appendC
       string.empty
       string.empty

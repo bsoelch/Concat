@@ -536,7 +536,7 @@ proc(
             id.SHIFT_BIT_FIELD << IdentifierFlag cast.u id.MASK_BIT_FIELD &
           end flags | flags=
         else ..drop
-          $ sb.fromStr
+          $ sb.copyStr
             " exceeds the maximum allow size for a bit-field":s sb.appendStr
           fileState program wordPos errors appendError
         end continue
