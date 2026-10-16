@@ -786,6 +786,7 @@ proc( LIROp list
   CompareType
   ValType
   FilePosition ptr
+  ConverterContext ptr.mut : context
 -> LIROp list ) =>: generateJump
   ## TODO: decay/remember stack-state
   lirJump list.append
@@ -793,6 +794,7 @@ end
 proc( LIROp list
   LocalLabelInfo
   FilePosition ptr
+  ConverterContext ptr.mut : context
 -> LIROp list ) =>: generateLabel
   ## TODO: update/merge/decay stack-state
   lirLabel list.append
@@ -811,18 +813,19 @@ proc(
   LIROp list
   ValType : switchValType
   FilePosition ptr : pos
+  ConverterContext ptr.mut : context
 -> SwitchData ptr LIROp list ) =>: generateSwitchBoundsCheck
   $1 getLowSwitchBound $ 0 == if ..drop
     0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .UGT switchValType pos generateJump
+    $1 [] .defaultLabel CompareType .UGT switchValType pos context generateJump
   else
     <$ 0 pos lirCopy list.append >$
     switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .LT switchValType pos generateJump
+    $1 [] .defaultLabel CompareType .LT switchValType pos context generateJump
     0 pos lirCopy list.append
     $1 getHighSwitchBound switchValType pos lirIntConst list.append
-    $1 [] .defaultLabel CompareType .GT switchValType pos generateJump
+    $1 [] .defaultLabel CompareType .GT switchValType pos context generateJump
   end
 end
 proc(
@@ -831,12 +834,13 @@ proc(
   LabelData : label
   ValType : switchValType
   FilePosition ptr : pos
+  ConverterContext ptr.mut : context
 -> SwitchData ptr LIROp list ) =>: generateSwitchCaseJump
   0 pos lirCopy list.append
   label .value switchLabelAsInt switchValType pos lirIntConst list.append
   $1 [] .branchLabels
     label .caseId []
-  CompareType .EQ switchValType pos generateJump
+  CompareType .EQ switchValType pos context generateJump
 end
 proc(
   SwitchData ptr
@@ -844,13 +848,13 @@ proc(
   i64 : splitIndex
   ValType : switchValType
   FilePosition ptr : pos
-  ProgramContext ptr.mut : program
+  ConverterContext ptr.mut : context
 -> SwitchData ptr LIROp list LocalLabelInfo ) =>: generateSwitchSplitJump
-  program program.nextLocalLabel <<$
-    $2 LocalLabelType .HINT_START LocalLabelInfo new pos generateLabel
+  context [] .program program.nextLocalLabel <<$
+    $2 LocalLabelType .HINT_START LocalLabelInfo new pos context generateLabel
     0 pos lirCopy list.append
     splitIndex switchValType pos lirIntConst list.append
-    $2 CompareType .GE switchValType pos generateJump
+    $2 CompareType .GE switchValType pos context generateJump
   >>$ LocalLabelType .LABEL_END LocalLabelInfo new
 end
 enum( VALID CASE4 INVALID ) =:: DenseCaseIdInfoState
@@ -923,10 +927,10 @@ proc(
   i64 : highBound
   ValType : switchValType
   FilePosition ptr : pos
-  ProgramContext ptr.mut : program
+  ConverterContext ptr.mut : context
 -> SwitchData ptr LIROp list ) =>: generateSwitchJumps
   labels .length 0 == if
-    $1 [] .defaultLabel CompareType .NONE switchValType pos generateJump
+    $1 [] .defaultLabel CompareType .NONE switchValType pos context generateJump
     return
   end
   highBound lowBound - labels .length 1 - i64 cast.u == =:: dense
@@ -937,29 +941,29 @@ proc(
       <<$
         labels for
           $ .caseId $4 != if
-            switchValType pos generateSwitchCaseJump
+            switchValType pos context generateSwitchCaseJump
           else ..drop end
         end
       $1 [] .branchLabels >>>$ []
         CompareType .NONE
-      switchValType pos generateJump
+      switchValType pos context generateJump
       return
     end
   end
   labels .length 3 u<= if
     ## small range -> generate direct jumps
-    labels for switchValType pos generateSwitchCaseJump end
-    $1 [] .defaultLabel CompareType .NONE switchValType pos generateJump
+    labels for switchValType pos context generateSwitchCaseJump end
+    $1 [] .defaultLabel CompareType .NONE switchValType pos context generateJump
     return
   end
   ## TODO: if range is dense and table is supported: generate table
   labels splitSwitchRange <<$ =:: tail =:: head
   <<$ ## <splitIndex> <switchData> <elts>
-    $2 switchValType pos program generateSwitchSplitJump <<$
+    $2 switchValType pos context generateSwitchSplitJump <<$
     ## <splitIndex> <splitLabel> <switchData> <elts>
-    head lowBound $5 switchValType pos program generateSwitchJumps
-    >>$ pos generateLabel ## <splitIndex> <switchData> <elts>
-  tail >>>$ highBound switchValType pos program generateSwitchJumps
+    head lowBound $5 switchValType pos context generateSwitchJumps
+    >>$ pos context generateLabel ## <splitIndex> <switchData> <elts>
+  tail >>>$ highBound switchValType pos context generateSwitchJumps
 end
 proc(
   LIROp list
@@ -974,9 +978,9 @@ proc(
         "expected switch type to be primitive" ..panic
       end =:: switchValType
     slice.wrap pos context popTypes
-    switchValType pos generateSwitchBoundsCheck
+    switchValType pos context generateSwitchBoundsCheck
   $1 [] .switchLabels list.asSlice
-    $2 getSwitchBounds switchValType pos program generateSwitchJumps
+    $2 getSwitchBounds switchValType pos context generateSwitchJumps
   >$ ..drop
   ## TODO: drop switch-value at start of branches
 end
@@ -1503,14 +1507,14 @@ proc(
           ## move mergable operation after start hint
           $ list.peek .and .data .Compare ? if
             list.pop optional.unwrap =:: tmp
-            labelInfo op .pos generateLabel
+            labelInfo op .pos context generateLabel
             tmp list.append
             return
           end
         break
         LABEL_START LABEL_MIDDLE LABEL_END case break
       end
-      labelInfo op .pos generateLabel
+      labelInfo op .pos context generateLabel
     return
     LocalJump .case =:: jumpInfo
       jumpInfo .cmpType .NONE ! if
@@ -1532,7 +1536,7 @@ proc(
             >$ <<<$ ## jmpDst cmpType list cmpOp -- list jmpDst cmpType cmpOp
             mergeJumpIf
           else ValType .BOOL end
-        else ValType .BOOL end op .pos generateJump
+        else ValType .BOOL end op .pos context generateJump
     return
     CompilerInfo case return ## TODO? preserve compilerInfo ops
     ConstantReference Error case
