@@ -365,7 +365,7 @@ namespace: constant
       SetType case
         "unimplemented: set-type default values" ..panic
       Quotation .case ConstValue .Procedure return
-      GenericType GeneratedType RefinementType
+      GenericType GenericSplat GeneratedType RefinementType
           IntLiteral Initializer case
         "unsupported type for zero-initialized constant" ..panic
     end

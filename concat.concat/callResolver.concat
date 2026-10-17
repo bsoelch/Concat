@@ -128,6 +128,7 @@ proc(
     src return
   end
   src switch
+    GenericSplat case "unimplemented: generic splats" ..panic
     GenericType case
       src types.getGenericTypeId optional.unwrap =:: genericId
       genericValues genericId ArgumentId.fromName map.at .if
@@ -383,6 +384,7 @@ proc(
     else src typeContext types.initializerAsTuple
   ._else src end =:: shadow: src
   target switch
+    GenericSplat case "unimplemented: GenericSplats" ..panic
     GenericType case
       target types.getGenericTypeId optional.unwrap =:: genericId
       genericValues genericId ArgumentId.fromName map.get .if
@@ -941,13 +943,15 @@ proc(
         i 1:iSize + continue ## no value present
       end
       MatchType .NONE =:: mut: matchType
-      paramType typeContext types.isGeneric and
+      paramType typeContext types.isGenericSplat if
+        "unimplemented: generic splat" ..panic
+      else paramType typeContext types.isGeneric and
           paramType
             typeContext types.unwrapNamed
           types.getGenericTypeId optional.unwrap =:: paramId
           current .genericValues
             paramId ArgumentId.fromName
-          map.at optional.isEmpty if
+          map.at optional.isEmpty _if
         ## add copy of signature with generic type set to empty
         i currentSignatures@ copyElement =:: copySig
         ## update current pointer after changing list

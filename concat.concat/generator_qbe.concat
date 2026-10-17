@@ -188,7 +188,7 @@ proc( Type : t CompilerContext ptr : context -> ValType ) =>: toValType
       ValType .REFERENCE return
     SetType RefinementType case
       t typeContext types.unwrapRefinement context toValType return
-    Undefined Empty GenericType Align case
+    Undefined Empty GenericType GenericSplat Align case
       ValType .EMPTY return
   end
 end
@@ -619,7 +619,7 @@ namespace: sb
           t typeContext types.unwrapRefinement storeType pos context
         appendTypeNameQBE
       return
-      Undefined Empty GenericType Initializer Align case
+      Undefined Empty GenericType GenericSplat Initializer Align case
         break
     end
     "unsupported type " sb.copyPtr

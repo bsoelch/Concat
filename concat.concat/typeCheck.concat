@@ -4089,6 +4089,11 @@ proc(
               #+elt+# ConstValue .TypeId types.primitive.TYPE op .pos state pushConstant
             end
             continue.opLoop
+          else typeVal types.getGenericTypeId ._if
+            types.newGenericSplat ConstValue .TypeId
+              types.primitive.TYPE
+            op .pos state pushConstant
+            continue.opLoop
           end
         else .Array ._if =:: elements
           constVal .valType typeContext types.isTuple if

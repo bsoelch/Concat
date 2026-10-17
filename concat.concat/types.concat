@@ -83,6 +83,7 @@ union(
         types.SetTypeId : SetType
  types.RefinementTypeId : RefinementType
                  NameId : GenericType
+                 NameId : GenericSplat
                  NameId : NamedType
   types.GeneratedTypeId : GeneratedType
 ) =:: export: Type
@@ -272,6 +273,8 @@ namespace: types
         b .NamedType unionElement.unwrap NameId.cmp return
       GenericType .case
         b .GenericType unionElement.unwrap NameId.cmp return
+      GenericSplat .case
+        b .GenericSplat unionElement.unwrap NameId.cmp return
       Pointer .case
         b .Pointer unionElement.unwrap arrayTypeCmp return
       MutablePointer .case
@@ -373,6 +376,7 @@ namespace: types
       RefinementType .case refinementTypeHash 73 * return
       Quotation .case ProcId.hash 79 * return
       ComputedUnion .case unionTypeHash 83 * return
+      GenericSplat .case NameId.hash 1 + 89 * return
     end
   end
 end
@@ -407,21 +411,17 @@ namespace: types
       "called primitive value on non-primitive type" ..panic
     end return
   end
-  proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isEmpty ## TODO? should pointer to empty be empty
+  proc( Type : t0 TypeContext ptr : context -> bool ) =>: export: isEmpty
     t0 context unwrapNamed =:: t
+    Type ..length 26 == "no new types" assert
     t switch
        Empty Align case true return
        ArrayType .case ## arrays of empty values are empty
          arrayTypeBase context isEmpty return
-       Undefined PrimitiveType Procedure  CType Pointer
-           MutablePointer MutableRawPointer RawPointer Initializer
-           NamedType GenericType IntLiteral UnionElement Quotation
-           GeneratedType Enum RefinementType TaggedUnion ComputedUnion case
-         false
-       return
        SetType .case .elements [] .length 0 == return
        Struct RawUnion case
          t context compositeFlags COMP_FLAG_EMPTY & ? return
+       _ case false return
     end
   end
 
@@ -536,17 +536,14 @@ namespace: types
     .Quotation .if optional.wrap else ..drop ProcId optional.empty end
   end
   proc( Type -> bool ) =>: export: isLiteral
+    Type ..length 26 == "no new types" assert
     switch
        IntLiteral Initializer case true return
-       Empty ArrayType UnionElement RawUnion
-           Undefined PrimitiveType Procedure CType Pointer
-           NamedType GenericType RawPointer Quotation
-           GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct TaggedUnion ComputedUnion SetType RefinementType case
-         false return
+       _ case false return
     end
   end
   proc( Type : t TypeContext ptr.mut : context -> Type ) =>: export: literalToType
+    Type ..length 26 == "no new types" assert
     t switch
        IntLiteral .case context intLiteralAsInt return
        Initializer .case InitializerInfo ptr.mut cast =:: initInfo
@@ -576,12 +573,7 @@ namespace: types
           newTuple return
         end
         initInfo .asTuple TupleId cast Type .Struct return
-       Empty  ArrayType UnionElement RawUnion
-           Undefined  PrimitiveType Procedure CType Pointer
-           NamedType GenericType RawPointer Quotation
-           GeneratedType Enum Align MutablePointer MutableRawPointer
-           Struct TaggedUnion ComputedUnion SetType RefinementType case
-         t return
+       _ case t return
     end
   end
 
@@ -640,7 +632,7 @@ namespace: types
           eltType commonType SimpleTypeInfo.mix commonType=
         end
       commonType return
-      Undefined GenericType UnionElement TaggedUnion case
+      Undefined GenericType GenericSplat UnionElement TaggedUnion case
         SimpleTypeInfo.MANY return
       Initializer .case .asTuple TupleId cast Type .Struct context simpleType return
       SetType .case .baseType [] context simpleType return
@@ -669,7 +661,7 @@ namespace: types
       RawUnion ComputedUnion .case
         Type .RawUnion context simpleType SimpleTypeInfo.MANY !=
       return
-      Undefined GenericType case false return
+      Undefined GenericType GenericSplat case false return
       Initializer .case .asTuple TupleId cast Type .Struct context isValueType return
       UnionElement .case unionElementUnion context isValueType return
       SetType .case .baseType [] context isValueType return
@@ -893,6 +885,7 @@ namespace: types
     Type : composite
     TypeContext ptr.mut : typeContext
   -> bool ) =>: tryComputeSize
+    Type ..length 26 == "no new types" assert
     composite switch
       Struct TaggedUnion .case
         composite >$ typeContext tryComputeTupleSize
@@ -905,16 +898,13 @@ namespace: types
           composite
           >$ InitializerInfo ptr.mut cast .asTuple TupleId cast
         typeContext tryComputeTupleSize return
-      Undefined Empty GenericType RawPointer MutableRawPointer Quotation
-      PrimitiveType IntLiteral CType ArrayType Enum UnionElement
-      Pointer MutablePointer Procedure Align SetType RefinementType
-      NamedType GeneratedType case ..unreachable
+      _ case ..unreachable
     end
   end
   ## alignment of type in bytes, will be a power of two
   proc( Type : t TypeContext ptr.mut : context -> TypeSize ) =>: export: alignOf
     t switch
-      Undefined GenericType case
+      Undefined GenericType GenericSplat case
         TypeSize .Unknown return
       Empty case
         1 TypeSize .Fixed return
@@ -958,7 +948,7 @@ namespace: types
     TypeContext ptr.mut : context
   -> TypeSize ) =>: computeSize
     t switch
-      Undefined GenericType case
+      Undefined GenericType GenericSplat case
         TypeSize .Unknown return
       Empty  case
         0 TypeSize .Fixed return
@@ -1324,15 +1314,13 @@ namespace: types
   ) =:: UnionElementInfo
   proc( Type TypeContext ptr : context -> bool ) =>: export: isComposite
     context unwrapNamed
+    Type ..length 26 == "no new types" assert
     switch
       Enum Struct TaggedUnion ComputedUnion RawUnion Initializer UnionElement case
         true return
-      Undefined Empty PrimitiveType Pointer MutablePointer ArrayType Procedure
-        NamedType GenericType GeneratedType IntLiteral Align
-        CType RawPointer MutableRawPointer Quotation case
-        false return
       SetType .case .baseType [] context isComposite return
       RefinementType .case .baseType [] context isComposite return
+      _ case false return
     end
   end
   ## TODO: rename all uses of Tuple to Struct (Tuple and Struct are the same)
@@ -1379,14 +1367,12 @@ namespace: types
     unwrapNamed .ComputedUnion ?
   end
   proc( Type TypeContext ptr : typeContext -> bool ) =>: export: isEnumOrTaggedUnion
+    Type ..length 26 == "no new types" assert
     typeContext unwrapNamed switch
       Enum TaggedUnion ComputedUnion case true return
-      Struct Undefined Empty PrimitiveType Pointer ArrayType Procedure RawUnion
-       NamedType GenericType GeneratedType IntLiteral Initializer RawPointer
-       CType Align MutablePointer MutableRawPointer UnionElement Quotation case
-         false return
       SetType .case .baseType [] typeContext isEnumOrTaggedUnion return
       RefinementType .case .baseType [] typeContext isEnumOrTaggedUnion return
+      _ case false return
     end
   end
   proc( Type -> bool ) =>: export: isRawUnion0
@@ -1410,6 +1396,7 @@ namespace: types
     EnumInfo ptr : Enum
   ) =:: CompositeData
   proc( Type : composite TypeContext ptr : context -> CompositeData ) =>: compositeData
+    Type ..length 26 == "no new types" assert
     composite context unwrapNamed
       switch
         Struct TaggedUnion .case TupleInfo ptr cast .compositeInfo CompositeData .Composite return
@@ -1418,12 +1405,9 @@ namespace: types
         Initializer .case
           InitializerInfo ptr cast .asTuple .compositeInfo CompositeData .Composite return
         Enum .case EnumInfo ptr cast CompositeData .Enum return
-        Undefined Empty PrimitiveType Pointer ArrayType Procedure Quotation
-         NamedType GenericType GeneratedType IntLiteral Align
-         CType RawPointer MutablePointer MutableRawPointer case
-          CompositeData .None return
         SetType .case .baseType [] context compositeData return
         RefinementType .case .baseType [] context compositeData return
+        _ case CompositeData .None return
       end
   end
   proc( Type : composite TypeContext ptr : context -> i32 ) =>: export: compositeEltCount
@@ -1480,14 +1464,12 @@ namespace: types
     i32 : index
     TypeContext ptr.mut : typeContext
   -> i64 optional ) =>: export: tupleElementOffset
+    Type ..length 26 == "no new types" assert
     tuple typeContext unwrapNamed switch
       Struct TaggedUnion .case break
-      Enum RawUnion ComputedUnion UnionElement Undefined Empty PrimitiveType Pointer ArrayType Procedure
-       NamedType GenericType GeneratedType IntLiteral Initializer Align Quotation
-       CType RawPointer MutablePointer MutableRawPointer case
-         i64 optional.empty return
-       SetType .case .baseType [] index typeContext tupleElementOffset return
-       RefinementType .case .baseType [] index typeContext tupleElementOffset return
+      SetType .case .baseType [] index typeContext tupleElementOffset return
+      RefinementType .case .baseType [] index typeContext tupleElementOffset return
+      _ case i64 optional.empty return
     end =:: tupleId
     tuple tupleId typeContext tryComputeTupleSize if
       i64 optional.empty return
@@ -1502,6 +1484,7 @@ namespace: types
     Type : enum
     TypeContext ptr.mut : typeContext
   -> Type i64 optional ) =>: export: enumTagInfo
+    Type ..length 26 == "no new types" assert
     enum typeContext unwrapNamed switch
       Enum .case EnumInfo ptr cast [] .tagType 0:i64  optional.wrap return
       TaggedUnion .case .compositeInfo [] .elements 1 []
@@ -1509,12 +1492,9 @@ namespace: types
       ComputedUnion case primitive.I8 i64 optional.empty return
       RawUnion case Type .Empty i64 optional.empty return
       UnionElement .case .base [] typeContext enumTagInfo return
-      Struct Undefined  Empty PrimitiveType Pointer ArrayType Procedure Quotation
-       NamedType GenericType GeneratedType IntLiteral Initializer Align
-       CType RawPointer MutablePointer MutableRawPointer case
-         Type .Empty i64 optional.empty return
-       SetType .case .baseType [] typeContext enumTagInfo return
-       RefinementType .case .baseType [] typeContext enumTagInfo return
+      SetType .case .baseType [] typeContext enumTagInfo return
+      RefinementType .case .baseType [] typeContext enumTagInfo return
+      _ case Type .Empty i64 optional.empty return
     end
   end
   proc( Type : composite TypeContext ptr : context -> CompositeFlags ) =>: compositeFlags
@@ -2324,14 +2304,23 @@ namespace: types
     baseType primitive.TYPE typeEquals or baseType context isTypeRefinement end return
   end
 
-  proc( NameId : id -> Type ) =>: export: newGenericType
-    id Type .GenericType return
+  proc( NameId -> Type ) =>: export: newGenericType
+    Type .GenericType return
+  end
+  proc( NameId -> Type ) =>: export: newGenericSplat
+    Type .GenericSplat return
   end
   proc( Type TypeContext ptr -> bool ) =>: export: isGeneric
     unwrapNamed .GenericType ? return
   end
+  proc( Type TypeContext ptr -> bool ) =>: export: isGenericSplat
+    unwrapNamed .GenericSplat ? return
+  end
   proc( Type : t -> NameId optional ) =>: export: getGenericTypeId
-    t .GenericType .if optional.wrap else ..drop NameId optional.empty end
+    t switch
+      GenericType GenericSplat .case optional.wrap return
+      _ case { } return
+    end
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
@@ -2374,7 +2363,7 @@ namespace: types
         false return
       NamedType case
         t context unwrapNamed context containsGeneric return
-      GenericType case
+      GenericType GenericSplat case
         true return
       SetType .case =:: setTypeId
         setTypeId .baseType [] context containsGeneric if
@@ -3086,11 +3075,12 @@ namespace: sb
             depth
           appendNamedType
         return
-      GenericType .case =:: nameId
+      GenericType GenericSplat .case
         sb
           '`' sb.appendC
-          nameId appendIdentifierName
+          >$ appendIdentifierName
           '`' sb.appendC
+          t .GenericSplat ? if " ...":s sb.appendStr end
         return
       GeneratedType .case types.GeneratedTypeName ptr cast =:: genTypeName
         sb
