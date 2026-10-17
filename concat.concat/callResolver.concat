@@ -1355,3 +1355,34 @@ proc(
   currentSignatures@ cleanupSignatures
   result optional.wrap calledProcId optional.wrap calledType return
 end
+
+struct(
+  ProcId : id
+) =:: ProcCallInfo
+proc(
+  ProcCallInfo list
+  ProcId slice
+  TypeCheckState ptr.mut : typeChecker
+-> ProcCallInfo list ) =>: filterTypeShapes
+  ## TODO: for each proc check if shapes of types on stack match type-shapes in signature
+  ## ? for-each-proc check all args VS for-each-arg check all procs
+  ## 1. add procs matching first argument shape (shallow type-match+value-check for set-types) to call-list
+  ## 2. go through remaining arg's values from right to left, remove procs that no longer merge (skip procs that are complete)
+  ## * for generics: try two variants (empty or non-empty)
+  ## * for generic splats try one variant for each singature length
+  ## ? is there an algorithm with sub-exponential worst-case
+  ## ? optimize for linear-time "normal" case (arg-count small, generic-count < 4,proc-count 1 or large )
+  ..drop
+end
+proc(
+  ProcId slice
+  FilePosition ptr : pos
+  TypeCheckState ptr.mut : typeChecker
+-> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall2
+  ProcCallInfo list.create
+    >$ filterTypeShapes
+    ## TODO: check exact types (match/decay-match/generic-match/match-up-to-rename/match-up-to-const)
+    ## TODO: check quotations with splat as input / procs with implicit return type (compile proc with current input, detect return, cut of untouched arguments)
+    ## TODO: check refinement types
+  "unimplemented: resolveCall2" ..panic
+end
