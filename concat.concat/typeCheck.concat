@@ -682,16 +682,18 @@ proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> Type ) =>: popTyp
     pos errors appendError
     Type .Undefined return
   end
-    typeInfo [] .opIndex state currentBlockStart < if ..drop
-      "type-constant " sb.copyPtr
-        typeInfo [] .value typeContext sb.appendConstant
-        " at " sb.appendS
-        typeInfo [] .pushedAt [] sb.appendPos
-        " was declared outside current block" sb.appendS
-      pos errors appendError
-      Type .Undefined return
+    typeInfo [] .opIndex OP_EMPTY != if
+      typeInfo [] .opIndex state currentBlockStart < if ..drop
+        "type-constant " sb.copyPtr
+          typeInfo [] .value typeContext sb.appendConstant
+          " at " sb.appendS
+          typeInfo [] .pushedAt [] sb.appendPos
+          " was declared outside current block" sb.appendS
+        pos errors appendError
+        Type .Undefined return
+      end
+      typeInfo [] .opIndex state deleteOp ## remove stored operation
     end
-    typeInfo [] .opIndex state deleteOp ## remove stored operation
   return
 end
 proc( FilePosition ptr : pos TypeCheckState ptr.mut : state -> string ) =>: popString
@@ -2959,7 +2961,7 @@ proc(
     op .val switch
       NOP case continue.opLoop
       WildCard case ## TODO? special handling for wild-card
-        ConstValue .WildCard Type .Undefined op .pos state pushConstant
+        ConstValue .WildCard Type .Empty op .pos state pushConstant
       continue.opLoop
       CharConst .case
         ConstValue .Char types.CHAR8 op .pos state pushConstant

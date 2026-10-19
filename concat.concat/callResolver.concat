@@ -75,7 +75,7 @@ proc( GenericArg : val TypeContext ptr.mut : typeContext -> bool ) =>: isEmptyCo
     NonEmpty case false return
     Value Fixed .case break
   end =:: constVal
-  constVal .None ? or
+  constVal .None ? or constVal .WildCard ? or
     constVal .TypeId .and typeContext types.isEmpty
   end return
 end
@@ -942,6 +942,7 @@ proc(
       stackIndex stackValues .length u>= if
         i 1:iSize + continue ## no value present
       end
+      stackValues stackIndex @[] .value [] =:: stackVal
       MatchType .NONE =:: mut: matchType
       paramType typeContext types.isGenericSplat if
         "unimplemented: generic splat" ..panic
@@ -952,24 +953,32 @@ proc(
           current .genericValues
             paramId ArgumentId.fromName
           map.at optional.isEmpty _if
-        ## add copy of signature with generic type set to empty
-        i currentSignatures@ copyElement =:: copySig
-        ## update current pointer after changing list
-        currentSignatures i @[] current=
-        copySig .genericValues
-          paramId ArgumentId.fromName
-          Type .Empty ConstValue .TypeId GenericArg .Fixed
-        map.put ..drop
-        copySig [] .nEmpty
-          1 +
-        copySig .nEmpty=
-        ## mark generic as non-empty
-        current .genericValues
-          paramId ArgumentId.fromName
-          GenericArg .NonEmpty
-        map.put ..drop
+        stackVal .WildCard ? if
+          current [] .nEmpty 1 + current .nEmpty=
+          current .genericValues
+            paramId ArgumentId.fromName
+            Type .Empty ConstValue .TypeId GenericArg .Fixed
+          map.put ..drop
+          i 1:iSize + continue ## matched empty value to generic
+        else
+          ## add copy of signature with generic type set to empty
+          i currentSignatures@ copyElement =:: copySig
+          ## update current pointer after changing list
+          currentSignatures i @[] current=
+          copySig .genericValues
+            paramId ArgumentId.fromName
+            Type .Empty ConstValue .TypeId GenericArg .Fixed
+          map.put ..drop
+          copySig [] .nEmpty
+            1 +
+          copySig .nEmpty=
+          ## mark generic as non-empty
+          current .genericValues
+            paramId ArgumentId.fromName
+            GenericArg .NonEmpty
+          map.put ..drop
+        end
       end
-      stackValues stackIndex @[] .value [] =:: stackVal
       paramName? .and id.identifierFlags id.FLAG_STATIC & ? end or
           paramType typeContext types.isType or stackVal .TypeId ? if
         stackVal .None ? if
@@ -1379,8 +1388,8 @@ proc(
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
 -> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall2
-  ProcCallInfo list.create
-    >$ filterTypeShapes
+  $ .length ProcCallInfo list.create
+    >$ typeChecker filterTypeShapes
     ## TODO: check exact types (match/decay-match/generic-match/match-up-to-rename/match-up-to-const)
     ## TODO: check quotations with splat as input / procs with implicit return type (compile proc with current input, detect return, cut of untouched arguments)
     ## TODO: check refinement types
