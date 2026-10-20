@@ -1706,7 +1706,7 @@ proc(
     message@ optional.wrap
     pos
     state
-  resolveCall =:: calledType
+  _RESOLVER_2_ if resolveCall2 else resolveCall end =:: calledType
     =:: calledProcId
   .if
     message .length 0:iSize u> if

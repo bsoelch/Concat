@@ -102,6 +102,9 @@ proc( -> ) =>: parseArgs
     arg.flag
       "enable experimental support for value-types":s arg.helpText
     _VAL_TYPES_@ "-Xval-types":s arg.set
+    arg.flag
+      "use experimental call-resolver":s arg.helpText
+    _RESOLVER_2_@ "-Xresolver2":s arg.set
     OptLevel arg.select ## select value depending on which arg appear last
       OptLevel .DEFAULT arg.select.default
       "-O0":s OptLevel .NONE arg.select.option

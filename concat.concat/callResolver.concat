@@ -1400,33 +1400,109 @@ proc(
   currentSignatures@ cleanupSignatures
 end
 
-struct(
-  ProcId : id
-) =:: ProcCallInfo
-proc(
-  ProcCallInfo list
-  ProcId slice
-  TypeCheckState ptr.mut : typeChecker
--> ProcCallInfo list ) =>: filterTypeShapes
-  ## TODO: for each proc check if shapes of types on stack match type-shapes in signature
-  ## ? for-each-proc check all args VS for-each-arg check all procs
-  ## 1. add procs matching first argument shape (shallow type-match+value-check for set-types) to call-list
-  ## 2. go through remaining arg's values from right to left, remove procs that no longer merge (skip procs that are complete)
-  ## * for generics: try two variants (empty or non-empty)
-  ## * for generic splats try one variant for each singature length
-  ## ? is there an algorithm with sub-exponential worst-case
-  ## ? optimize for linear-time "normal" case (arg-count small, generic-count < 4,proc-count 1 or large )
-  ..drop
+enum( OTHER NUMBER POINTER PROCEDURE ) =:: TypeShape
+#+ coarse classification of types,
+  there are no implicit conversions between types with different shapes (except OTHER)
++#
+proc( Type : t TypeContext ptr.mut : typeContext -> TypeShape ) =>: typeShape
+  t typeContext types.unwrapNamed =:: base
+  base .PrimitiveType .if
+    switch
+      I8 I16 I32 I64 F16 F32 F64 case TypeShape .NUMBER return
+      BOOL TYPE case TypeShape .OTHER return
+    end
+  else ..drop end
+  base switch
+    IntLiteral case TypeShape .NUMBER return
+    Quotation Procedure case TypeShape .PROCEDURE return
+    Pointer MutablePointer RawPointer MutableRawPointer .case
+      types.arrayTypeBase typeContext types.isProcedure if
+        TypeShape .OTHER return ## procedures can be converted to procedure pointers
+      end
+      TypeShape .POINTER return
+    SetType .case .baseType [] typeContext typeShape return
+    RefinementType .case .baseType [] typeContext typeShape return
+    _ case TypeShape .OTHER return
+  end
 end
+#+ shallow check if the stack-values can match the parameters of the procedure,
+  only returns false if the procedure cannot be called with the given arguments
++#
 proc(
-  ProcId slice
+  ProcId : procId
+  StackValue slice : stackValues
+  TypeContext ptr.mut : typeContext
+-> bool ) =>: shapesMatch
+  procId ProcId.getProcInfo .procType [] =:: procType
+  procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
+  inTypes .length stackValues .length iSize.min i32 cast.u for =:: stackIndex
+    inTypes .length i32 cast.u 1 - stackIndex - =:: paramIndex
+    inTypes paramIndex [] =:: paramType
+    paramType typeContext typeShape =:: paramShape
+    ## stop at parameters that may not consume an argument (empty/generic) -> position of remaining parameters is unknown
+    paramShape .OTHER if
+      true return
+    end
+    procType paramIndex typeContext types.getProcArgName .and
+      id.identifierFlags id.FLAG_AUTO & ?
+    end if
+      true return
+    end
+    stackValues stackIndex [] =:: stackVal
+    stackVal .valType typeContext typeShape =:: argShape
+    argShape .OTHER argShape paramShape == | ! if
+      false return
+    end
+    ## value check for set-types
+    paramType typeContext types.isSetType and
+        stackVal .valType typeContext types.isSetOrRefinementType ! and
+        stackVal .value .None ? ! and
+        stackVal .value .WildCard ? ! and
+        stackVal .value .GenericArg ? ! and
+        stackVal .value paramType typeContext types.checkSetType ! if
+      false return
+    end
+  end
+  true return
+end
+#+ resolves the called procedure in two phases:
+  1. remove procedures where the shapes of the arguments do not match the parameters
+  2. exact type-check of remaining procedures
++#
+proc(
+  ProcId slice : procedureIds
+  StackValue slice : stackValues
+  stringBuilder ptr.mut optional : errorMessage
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
 -> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall2
-  $ .length ProcCallInfo list.create
-    >$ typeChecker filterTypeShapes
-    ## TODO: check exact types (match/decay-match/generic-match/match-up-to-rename/match-up-to-const)
-    ## TODO: check quotations with splat as input / procs with implicit return type (compile proc with current input, detect return, cut of untouched arguments)
-    ## TODO: check refinement types
-  "unimplemented: resolveCall2" ..panic
+  typeChecker [] .program =:: progContext
+  progContext .idContext .typeContext =:: typeContext
+  procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
+  procedureIds for =:: procId
+    ## filtering a single procedure has no benefit
+    procedureIds .length 1:iSize == or procId stackValues typeContext shapesMatch if
+      currentSignatures
+        procId procId typeContext procArgCount newSignatureInfo list.append
+      currentSignatures=
+    end
+  end
+  ## TODO: check quotations with splat as input / procs with implicit return type (compile proc with current input, detect return, cut of untouched arguments)
+  stackValues currentSignatures@ pos typeChecker matchSignatures
+  currentSignatures cmpSignatures@ progContext list.sort currentSignatures=
+  currentSignatures .length 0:iSize == =:: mut: noUniqueMatch
+  noUniqueMatch ! if
+    currentSignatures 0 [] =:: candidate
+    candidate .needsParam candidate .argsMatch ! | noUniqueMatch=
+    noUniqueMatch ! and currentSignatures .length 1:iSize u> if
+      candidate currentSignatures 1 [] progContext cmpSignatures 0 == noUniqueMatch=
+    end
+  end
+  noUniqueMatch if
+    ## the removed procedures cannot match, rerun with all procedures to get complete error message
+    currentSignatures@ cleanupSignatures
+    procedureIds stackValues errorMessage pos typeChecker resolveCall return
+  end
+  currentSignatures 0 @[] errorMessage pos typeChecker instantiateCall
+  currentSignatures@ cleanupSignatures
 end
