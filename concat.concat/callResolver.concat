@@ -811,51 +811,39 @@ proc( ConstValue TypeContext ptr.mut : typeContext -> ConstValue ) =>: decayLite
   end
 end
 
+proc( ProcId : procId TypeContext ptr.mut : typeContext -> iSize ) =>: procArgCount
+  procId ProcId.getProcInfo [] .procType
+    typeContext types.getProcIn .if .length else 0:iSize end
+end
+proc( ProcId : procId iSize : argCount -> CallSignatureInfo ) =>: newSignatureInfo
+  ## TODO! do not create a map for every single procedure
+  ## CallSignatureInfo
+    procId
+    argCount ParameterInfo list.create
+    ArgumentId.hash@ ArgumentId.eq@ argCount i32 cast.u GenericArg map.create
+    0
+    0
+    0
+    0
+    0
+    0
+    true
+    argCount 0:iSize !=
+  CallSignatureInfo new
+end
+
+#+ matches the given stack-values against all signatures (top of stack first),
+  adds copies of signatures with generics set to empty where necessary
++#
 proc(
-  ProcId slice : procedureIds
   StackValue slice : stackValues
-  stringBuilder ptr.mut optional : errorMessage
+  CallSignatureInfo list ptr.mut : signatures
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
--> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall
+-> ) =>: matchSignatures
   typeChecker [] .program =:: progContext
-  progContext .idContext =:: idContext
-  idContext .typeContext =:: typeContext
-  typeContext .nameContext =:: nameContext
-  idContext .constContext =:: constContext
-  procedureIds .length 0:iSize == if
-    errorMessage .if =:: messageData
-      messageData []
-        "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
-      messageData =[]
-    end
-    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
-  end
-  procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
-  MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
-  procedureIds for =:: procId
-    procId ProcId.getProcInfo =:: procInfo
-    procInfo [] .procType
-      typeContext types.getProcIn .if .length else 0:iSize end
-    =:: argCount
-    maxArgs argCount iSize.max maxArgs=
-    ## TODO! do not create a map for every single procedure
-    currentSignatures
-      ## CallSignatureInfo
-        procId
-        argCount ParameterInfo list.create
-        ArgumentId.hash@ ArgumentId.eq@ argCount i32 cast.u GenericArg map.create
-        0
-        0
-        0
-        0
-        0
-        0
-        true
-        argCount 0:iSize !=
-      CallSignatureInfo new list.append
-    currentSignatures=
-  end
+  progContext .idContext .typeContext =:: typeContext
+  signatures [] =:: mut: currentSignatures
   0:iSize while $ stackValues .length u<= do =:: stackIndex
     stackIndex stackValues .length u< if
       stackValues stackIndex @[] .valType []
@@ -1081,87 +1069,72 @@ proc(
     end ..drop
     stackIndex 1:iSize +
   end ..drop
-  currentSignatures cmpSignatures@ progContext list.sort currentSignatures=
-  currentSignatures 0 @[] =:: candidate
-  candidate [] .needsParam or candidate [] .argsMatch ! if
-    ## no match
-    errorMessage .if =:: messageData
-      messageData []
-        "no matching signature for arguments ( " sb.appendS
-        stackValues .length maxArgs u> if "... " sb.appendS end
-        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i @[] =:: val
-          val [] .valType typeContext sb.appendType
-          val [] .value .None ? ! if
-            " { " sb.appendS
-            val [] .value typeContext sb.appendConstant
-            " }" sb.appendS
-          end
-          "  " sb.appendS
-          i 1:iSize -
-        end ..drop
-        ")\ncandidates:\n" sb.appendS
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
-        maxSignatures for =:: i
-          currentSignatures i @[] =:: mut: current
-          current [] .procId ProcId.getProcInfo =:: procInfo
-          "  * " sb.appendS
-          procInfo [] .procType typeContext sb.appendType
-          ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendIdentifierPath
-          '\n' sb.appendC
-        end
-        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      messageData =[]
+  currentSignatures signatures =[]
+end
+
+proc(
+  stringBuilder
+  StackValue slice : stackValues
+  iSize : maxArgs
+  TypeContext ptr.mut : typeContext
+-> stringBuilder ) =>: appendArgList
+  stackValues .length maxArgs u> if "... " sb.appendS end
+  stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
+    stackValues i @[] =:: val
+    val [] .valType typeContext sb.appendType
+    val [] .value .None ? ! if
+      " { " sb.appendS
+      val [] .value typeContext sb.appendConstant
+      " }" sb.appendS
     end
-    currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
-  end
-  currentSignatures .length 1:iSize != and
-      ## cmpSignatures
-        candidate []
-        currentSignatures 1 []
-        progContext
-      cmpSignatures 0 == if
-    ## multiple matches
-    errorMessage .if =:: messageData
-      messageData []
-        "multiple matching signatures for arguments ( " sb.appendS
-        stackValues .length maxArgs u> if "... " sb.appendS end
-        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i @[] =:: val
-          val [] .valType typeContext sb.appendType
-          val [] .value .None ? ! if
-            " { " sb.appendS
-            val [] .value typeContext sb.appendConstant
-            " }" sb.appendS
-          end
-          "  " sb.appendS
-          i 1:iSize -
-        end ..drop
-        ")\npossible matches: \n" sb.appendS
-        true =:: mut: isEquivalent
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
-        maxSignatures for =:: i
-          currentSignatures i @[] =:: mut: current
-          current [] .procId ProcId.getProcInfo =:: procInfo
-          isEquivalent and
-              candidate [] current [] progContext cmpSignatures 0 != if
-            "other signatures: \n" sb.appendS
-            false isEquivalent=
-          end
-          "  * " sb.appendS
-          procInfo [] .procType typeContext sb.appendType
-          ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendIdentifierPath
-          '\n' sb.appendC
-        end
-        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      messageData =[]
+    "  " sb.appendS
+    i 1:iSize -
+  end ..drop
+end
+#+ appends the (sorted) signatures to the error message,
+  if `markEquivalent` is set signatures that are not equivalent to the first signature are listed separately
++#
+proc(
+  stringBuilder
+  CallSignatureInfo list : signatures
+  bool : markEquivalent
+  ProgramContext ptr.mut : progContext
+-> stringBuilder ) =>: appendCandidates
+  progContext .idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  markEquivalent =:: mut: isEquivalent
+  MAX_DISPLAY_SIGNATURES signatures .length i32 cast.u i32.min =:: maxSignatures
+  maxSignatures for =:: i
+    signatures i [] =:: current
+    current .procId ProcId.getProcInfo =:: procInfo
+    isEquivalent and
+        signatures 0 [] current progContext cmpSignatures 0 != if
+      "other signatures: \n" sb.appendS
+      false isEquivalent=
     end
-    currentSignatures@ cleanupSignatures
-    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
+    "  * " sb.appendS
+    procInfo [] .procType typeContext sb.appendType
+    ' ' sb.appendC
+    procInfo [] .nameId nameContext sb.appendIdentifierPath
+    '\n' sb.appendC
   end
+  signatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
+end
+
+#+ creates the procedure-call info for the selected signature,
+  creates a new implementation if the called procedure is generic
++#
+proc(
+  CallSignatureInfo ptr.mut : candidate
+  stringBuilder ptr.mut optional : errorMessage
+  FilePosition ptr : pos
+  TypeCheckState ptr.mut : typeChecker
+-> ProcedureCallInfo optional ProcId optional Type ) =>: instantiateCall
+  typeChecker [] .program =:: progContext
+  progContext .idContext =:: idContext
+  idContext .typeContext =:: typeContext
+  typeContext .nameContext =:: nameContext
+  idContext .constContext =:: constContext
   candidate [] .procId ProcId.getProcInfo =:: procInfo
   candidate [] .procId =:: calledProcId
   ## TODO? nested alias
@@ -1176,7 +1149,6 @@ proc(
         procType typeContext sb.appendType
       >$ =[]
     end
-    currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
   procType typeContext types.getProcIn .else "proc without in" ..panic end =:: inTypes
@@ -1361,8 +1333,71 @@ proc(
     constArgs list.asSlice constContext constArray
   ProcedureCallInfo new =:: result
   constArgs list.free constArgs=
-  currentSignatures@ cleanupSignatures
   result optional.wrap calledProcId optional.wrap calledType return
+end
+
+proc(
+  ProcId slice : procedureIds
+  StackValue slice : stackValues
+  stringBuilder ptr.mut optional : errorMessage
+  FilePosition ptr : pos
+  TypeCheckState ptr.mut : typeChecker
+-> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall
+  typeChecker [] .program =:: progContext
+  progContext .idContext .typeContext =:: typeContext
+  procedureIds .length 0:iSize == if
+    errorMessage .if =:: messageData
+      messageData []
+        "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
+      messageData =[]
+    end
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
+  end
+  procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
+  MAX_DISPLAY_ARGS_DEFAULT =:: mut: maxArgs
+  procedureIds for =:: procId
+    procId typeContext procArgCount =:: argCount
+    maxArgs argCount iSize.max maxArgs=
+    currentSignatures
+      procId argCount newSignatureInfo list.append
+    currentSignatures=
+  end
+  stackValues currentSignatures@ pos typeChecker matchSignatures
+  currentSignatures cmpSignatures@ progContext list.sort currentSignatures=
+  currentSignatures 0 @[] =:: candidate
+  candidate [] .needsParam or candidate [] .argsMatch ! if
+    ## no match
+    errorMessage .if =:: messageData
+      messageData []
+        "no matching signature for arguments ( " sb.appendS
+        stackValues maxArgs typeContext appendArgList
+        ")\ncandidates:\n" sb.appendS
+        currentSignatures false progContext appendCandidates
+      messageData =[]
+    end
+    currentSignatures@ cleanupSignatures
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
+  end
+  currentSignatures .length 1:iSize != and
+      ## cmpSignatures
+        candidate []
+        currentSignatures 1 []
+        progContext
+      cmpSignatures 0 == if
+    ## multiple matches
+    errorMessage .if =:: messageData
+      messageData []
+        "multiple matching signatures for arguments ( " sb.appendS
+        stackValues maxArgs typeContext appendArgList
+        ")\npossible matches: \n" sb.appendS
+        currentSignatures true progContext appendCandidates
+      messageData =[]
+    end
+    currentSignatures@ cleanupSignatures
+    ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
+  end
+  candidate errorMessage pos typeChecker instantiateCall
+  currentSignatures@ cleanupSignatures
 end
 
 struct(
