@@ -73,7 +73,7 @@ namespace: branchTree
       end
       itr itr .tree [] .nodes itr .id i32 cast @[] .childCount [] 0 > return
     end
-    proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr ) =>: export: next
+    proc( type : auto: T T BranchItr : itr -> T BranchItr T ptr.mut ) =>: export: next
       itr .tree [] .nodes itr .id i32 cast @[] =:: node
       ## return
         itr .tree node [] .parent T BranchItr new
