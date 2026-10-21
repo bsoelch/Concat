@@ -1699,23 +1699,14 @@ proc(
   program .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
-  0 sb.create =:: mut: message
   ## resolveCall
     procedures
     stackValues slice.freeze
-    message@ optional.wrap
     pos
     state
   resolveCall =:: calledType
     =:: calledProcId
-  .if
-    message .length 0:iSize u> if
-      message pos errors appendInfo
-    else
-      message sb.free ..drop
-    end
-  else
-    message pos errors appendError
+  .else
     TypeCheckCallResult .Error return
   end =:: calledProc
   calledProc .procId ProcId.getProcInfo =:: baseProcData

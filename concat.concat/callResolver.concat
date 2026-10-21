@@ -814,21 +814,18 @@ end
 proc(
   ProcId slice : procedureIds
   StackValue slice : stackValues
-  stringBuilder ptr.mut optional : errorMessage
   FilePosition ptr : pos
   TypeCheckState ptr.mut : typeChecker
 -> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall
   typeChecker [] .program =:: progContext
+  progContext .errors =:: errors
   progContext .idContext =:: idContext
   idContext .typeContext =:: typeContext
   typeContext .nameContext =:: nameContext
   idContext .constContext =:: constContext
   procedureIds .length 0:iSize == if
-    errorMessage .if =:: messageData
-      messageData []
-        "empty procedure bundle" sb.appendS ##XXX? print name of procedure bundle
-      messageData =[]
-    end
+    "cannot resolve call to empty procedure bundle" sb.copyPtr ## TODO? print name of procedure bundle
+    pos errors appendError
     ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
   procedureIds .length CallSignatureInfo list.create =:: mut: currentSignatures
@@ -856,6 +853,7 @@ proc(
       CallSignatureInfo new list.append
     currentSignatures=
   end
+  ## TODO: change loop order: for-each-proc check all args (until error) instead for-each-arg check all procs
   0:iSize while $ stackValues .length u<= do =:: stackIndex
     stackIndex stackValues .length u< if
       stackValues stackIndex @[] .valType []
@@ -1084,36 +1082,32 @@ proc(
   currentSignatures cmpSignatures@ progContext list.sort currentSignatures=
   currentSignatures 0 @[] =:: candidate
   candidate [] .needsParam or candidate [] .argsMatch ! if
-    ## no match
-    errorMessage .if =:: messageData
-      messageData []
-        "no matching signature for arguments ( " sb.appendS
-        stackValues .length maxArgs u> if "... " sb.appendS end
-        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i @[] =:: val
-          val [] .valType typeContext sb.appendType
-          val [] .value .None ? ! if
-            " { " sb.appendS
-            val [] .value typeContext sb.appendConstant
-            " }" sb.appendS
-          end
-          "  " sb.appendS
-          i 1:iSize -
-        end ..drop
-        ")\ncandidates:\n" sb.appendS
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
-        maxSignatures for =:: i
-          currentSignatures i @[] =:: mut: current
-          current [] .procId ProcId.getProcInfo =:: procInfo
-          "  * " sb.appendS
-          procInfo [] .procType typeContext sb.appendType
-          ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendIdentifierPath
-          '\n' sb.appendC
+    "no matching signature for arguments ( " sb.copyPtr
+      stackValues .length maxArgs u> if "... ":s sb.appendStr end
+      stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
+        stackValues i @[] =:: val
+        val [] .valType typeContext sb.appendType
+        val [] .value .None ? ! if
+          " { ":s sb.appendStr
+          val [] .value typeContext sb.appendConstant
+          " }":s sb.appendStr
         end
-        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      messageData =[]
-    end
+        "  ":s sb.appendStr
+        i 1:iSize -
+      end ..drop
+      ")\ncandidates:\n":s sb.appendStr
+      MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
+      maxSignatures for =:: i
+        currentSignatures i @[] =:: mut: current
+        current [] .procId ProcId.getProcInfo =:: procInfo
+        "  * ":s sb.appendStr
+        procInfo [] .procType typeContext sb.appendType
+        ' ' sb.appendC
+        procInfo [] .nameId nameContext sb.appendIdentifierPath
+        '\n' sb.appendC
+      end
+      currentSignatures .length i32 cast.u maxSignatures > if "  ...\n":s sb.appendStr end
+    pos errors appendError
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
@@ -1124,41 +1118,38 @@ proc(
         progContext
       cmpSignatures 0 == if
     ## multiple matches
-    errorMessage .if =:: messageData
-      messageData []
-        "multiple matching signatures for arguments ( " sb.appendS
-        stackValues .length maxArgs u> if "... " sb.appendS end
-        stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
-          stackValues i @[] =:: val
-          val [] .valType typeContext sb.appendType
-          val [] .value .None ? ! if
-            " { " sb.appendS
-            val [] .value typeContext sb.appendConstant
-            " }" sb.appendS
-          end
-          "  " sb.appendS
-          i 1:iSize -
-        end ..drop
-        ")\npossible matches: \n" sb.appendS
-        true =:: mut: isEquivalent
-        MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
-        maxSignatures for =:: i
-          currentSignatures i @[] =:: mut: current
-          current [] .procId ProcId.getProcInfo =:: procInfo
-          isEquivalent and
-              candidate [] current [] progContext cmpSignatures 0 != if
-            "other signatures: \n" sb.appendS
-            false isEquivalent=
-          end
-          "  * " sb.appendS
-          procInfo [] .procType typeContext sb.appendType
-          ' ' sb.appendC
-          procInfo [] .nameId nameContext sb.appendIdentifierPath
-          '\n' sb.appendC
+    "multiple matching signatures for arguments ( " sb.copyPtr
+      stackValues .length maxArgs u> if "... ":s sb.appendStr end
+      stackValues .length maxArgs iSize.min 1:iSize - while $ 0:iSize iSize.sge do =:: i
+        stackValues i @[] =:: val
+        val [] .valType typeContext sb.appendType
+        val [] .value .None ? ! if
+          " { ":s sb.appendStr
+          val [] .value typeContext sb.appendConstant
+          " }":s sb.appendStr
         end
-        currentSignatures .length i32 cast.u maxSignatures > if "  ...\n" sb.appendS end
-      messageData =[]
-    end
+        "  ":s sb.appendStr
+        i 1:iSize -
+      end ..drop
+      ")\npossible matches: \n":s sb.appendStr
+      true =:: mut: isEquivalent
+      MAX_DISPLAY_SIGNATURES currentSignatures .length i32 cast.u i32.min =:: maxSignatures
+      maxSignatures for =:: i
+        currentSignatures i @[] =:: mut: current
+        current [] .procId ProcId.getProcInfo =:: procInfo
+        isEquivalent and
+            candidate [] current [] progContext cmpSignatures 0 != if
+          "other signatures: \n":s sb.appendStr
+          false isEquivalent=
+        end
+        "  * ":s sb.appendStr
+        procInfo [] .procType typeContext sb.appendType
+        ' ' sb.appendC
+        procInfo [] .nameId nameContext sb.appendIdentifierPath
+        '\n' sb.appendC
+      end
+      currentSignatures .length i32 cast.u maxSignatures > if "  ...\n":s sb.appendStr end
+    pos errors appendError
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
@@ -1170,12 +1161,9 @@ proc(
   end =:: baseProcId
   procInfo [] .procType =:: procType
   procType typeContext types.isProcedure ! if
-    errorMessage .if
-      $ []
-        "non-procedure type procedure: " sb.appendS
-        procType typeContext sb.appendType
-      >$ =[]
-    end
+    "non-procedure type procedure: " sb.copyPtr
+      procType typeContext sb.appendType
+    pos errors appendError
     currentSignatures@ cleanupSignatures
     ProcedureCallInfo optional.empty ProcId optional.empty Type .Undefined return
   end
@@ -1363,35 +1351,4 @@ proc(
   constArgs list.free constArgs=
   currentSignatures@ cleanupSignatures
   result optional.wrap calledProcId optional.wrap calledType return
-end
-
-struct(
-  ProcId : id
-) =:: ProcCallInfo
-proc(
-  ProcCallInfo list
-  ProcId slice
-  TypeCheckState ptr.mut : typeChecker
--> ProcCallInfo list ) =>: filterTypeShapes
-  ## TODO: for each proc check if shapes of types on stack match type-shapes in signature
-  ## ? for-each-proc check all args VS for-each-arg check all procs
-  ## 1. add procs matching first argument shape (shallow type-match+value-check for set-types) to call-list
-  ## 2. go through remaining arg's values from right to left, remove procs that no longer merge (skip procs that are complete)
-  ## * for generics: try two variants (empty or non-empty)
-  ## * for generic splats try one variant for each singature length
-  ## ? is there an algorithm with sub-exponential worst-case
-  ## ? optimize for linear-time "normal" case (arg-count small, generic-count < 4,proc-count 1 or large )
-  ..drop
-end
-proc(
-  ProcId slice
-  FilePosition ptr : pos
-  TypeCheckState ptr.mut : typeChecker
--> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall2
-  $ .length ProcCallInfo list.create
-    >$ typeChecker filterTypeShapes
-    ## TODO: check exact types (match/decay-match/generic-match/match-up-to-rename/match-up-to-const)
-    ## TODO: check quotations with splat as input / procs with implicit return type (compile proc with current input, detect return, cut of untouched arguments)
-    ## TODO: check refinement types
-  "unimplemented: resolveCall2" ..panic
 end
