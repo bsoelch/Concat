@@ -1,0 +1,2 @@
+cannot create pointer to generic splat at ./tests/typeChecker/invalidSplat.concat:1:28
+named element cannot be generic splat at ./tests/typeChecker/invalidSplat.concat:4:32

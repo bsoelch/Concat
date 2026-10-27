@@ -1,0 +1,12 @@
+proc( type : auto: T T ... ptr -> T ) =>: f
+
+end
+proc( type : auto: T ( T ... : x ) -> T ) =>: g
+
+end
+proc( type : auto: T ( T ... ) ptr -> ) =>: h
+
+end
+proc( -> ) =>: main
+  
+end

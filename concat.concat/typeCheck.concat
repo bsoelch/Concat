@@ -3354,7 +3354,11 @@ proc(
                   end
                 else .TypeId ._else ..drop
                   stackVal [] .valueType
-                end idData .valueType=
+                end
+                  $ types.isGenericSplat if
+                    "named element cannot be generic splat" sb.copyPtr op .pos errors appendError
+                  end
+                idData .valueType=
                 idInfo .nameId id.identifierFlags =:: idFlags
                 idFlags id.MASK_BIT_FIELD & id.BIT_FIELD_NONE != if
                   idFlags id.MASK_BIT_FIELD &
@@ -5893,6 +5897,13 @@ proc(
           end
         end
         baseType0 optional.unwrap
+          $ types.isGenericSplat if
+            typeMod .ARRAY if
+              "cannot create array of generic splat" sb.copyPtr
+            else
+              "cannot create pointer to generic splat" sb.copyPtr
+            end op .pos errors appendError
+          end
           idContext [] .arraySizeBuffer list.asSlice
             1 slice.tail
           slice.reversed for =:: size
