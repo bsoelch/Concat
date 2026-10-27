@@ -1,0 +1,183 @@
+
+enum( NONE EXACT DECAY GENERIC REFINE AMBIGOUS ) =:: ArgMatchType
+struct(
+  NameId : name
+  Type : value
+) =:: GenericArgInfo
+namespace: GenericArgInfo
+  proc( NameId Type -> GenericArgInfo ) =>: create
+    new
+  end
+end
+struct(
+  GenericArgInfo list : genericArgs ## TODO? use linked list with common arena for all Procs
+  ArgMatchType : matchType
+) =:: ProcMatchInfo
+namespace: ProcMatchInfo
+  proc( -> ProcMatchInfo ) =>: create
+    GenericArgInfo list.empty ArgMatchType .EXACT ProcMatchInfo new
+  end
+  proc( ProcMatchInfo -> ProcMatchInfo ) =>: copy
+    ## TODO create independent copy
+  end
+  proc( ProcMatchInfo -> ) =>: free
+    ..drop
+  end
+  proc( ProcMatchInfo NameId -> GenericArgInfo ptr.mut optional ) =>: genericInfo
+    >$ .genericArgs >$ list.asSlice @{ .name NameId.eq } slice.findAtMut
+  end
+  proc( ProcMatchInfo NameId -> Type optional ) =>: genericValue
+    genericInfo @{ [] .value } <map>
+  end
+  proc( ProcMatchInfo NameId Type -> bool ) =>: updateGenericValue
+    $2 $2 genericInfo .if
+      ## TODO update value
+    else
+      ## TODO create new generic
+    end
+  end
+  proc( ProcMatchInfo NameId Type -> ProcMatchInfo ) =>: newGenericValue
+    GenericArgInfo.create $1 .genericArgs list.append >$ .genericArgs=
+  end
+  proc( ProcMatchInfo Type -> ) =>: setLastGenericValue
+    >$ .genericArgs list.peek .else "expected at least on generic arg" ..panic end .value=
+  end
+  proc( ProcMatchInfo ptr.mut ArgMatchType -> bool ) =>: updateMatchType
+    ## TODO update match type
+  end
+end
+struct(
+  Type slice : argTypes
+  StackValue slice : stackValues
+) =:: ArgMatchState
+namespace: ArgMatchState
+  proc( ArgMatchState -> ArgMatchState Type ) =>: nextArgType
+    $ .argTypes slice.removeLast <<$ >$ .argTypes= >$
+  end
+  proc( ArgMatchState -> ArgMatchState StackValue ) =>: nextStackValue
+    $ .stackValues slice.removeLast <<$ >$ .stackValues= >$
+  end
+  proc( ArgMatchState Type : t -> ArgMatchState StackValue Type ) =>: nextStackValueForType
+    nextStackValue t
+  end
+  proc( ArgMatchState -> bool ) =>: isLastArg
+    .argTypes .length 0 ==
+  end
+end
+proc(
+  ProcMatchInfo list
+  ArgMatchState
+  StackValue
+  Type
+-> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchRefinementType
+  $ types.isSetTypes if
+    types.getSetTypeEntries for
+      $1 $1 constantEquals if ..drop.2
+        ArgMatchType .EXACT return
+      end
+      ## TODO: generic set-elements, ? type decayable to type-set element
+      ..drop
+    end
+    ..drop ArgMatchType .NONE return
+  else $ types.getTypeTrait ._if
+    ## TODO check refinement type
+  end
+  ..drop.2 ArgMatchType .NONE return
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchPartialGenericValue
+  $ types.isSetOrRefinementType if
+    ## TODO match generic set/refinement types
+  end
+  $ types.Callable if
+    ## TODO match procedure / proc-ptr
+  end
+  $1 .valType ..tag $1 ..tag != and $1 .valType types.isLiteral ! if
+    ..drop.2 ArgMatchType .NONE return ## incompatible shape
+  end
+  switch
+    Pointer MutablePointer RawPointer MutableRawPointer ArrayType case
+      ## check literals
+      ## match base-type and size
+    break
+    Struct TaggedUnion case
+      ## check literals
+      ## match elements
+    break
+    ComputedUnion RawUnion case
+      ## check literals
+      ## match elements
+    break
+    GeneratedType case
+      ## check literals
+      ## match type-params
+    break
+    UnionElement case "union-element cannot be a procedure argument" ..panic
+    Procedure case "procedures should have been handled seperately" ..panic
+    GenericType GenericSplat case "generics should have been handled in in their parent" ..panic
+    SetType RefinementType case "refinement types should have been handled seperately" ..panic
+    Undefined Empty Enum PrimitiveType IntLiteral CType Align NamedType Initializer Quotation case
+      "unexpected generic type" ..panic
+  end
+  ..drop.2 ArgMatchType .NONE return
+end
+
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchStackValue
+  $1 .valType $1 types.typeEquals if ..drop.2 ArgMatchType .EXACT return end
+  $ types.refinementBase .and $2 .valType types.typeEquals if
+    matchRefinementType return
+  end
+  $1 .valType $1 types.canDecayTo if ..drop.2
+    ArgMatchType .DECAY return
+  end
+  $ types.containsGeneric if
+    matchPartialGenericValue return
+  end
+  ## TODO? special match-type for almost match (e.g. ptr instead of ptr.mut) ? reverse-decayable
+  ArgMatchType .NONE return
+end
+proc( ProcMatchInfo list ArgMatchState StackValue NameId -> ProcMatchInfo list ArgMatchState bool ) =>: matchGenericArg
+  ## set generic value + test refinements
+  ..drop.2 true
+end
+proc(
+  ProcMatchInfo list
+  ArgMatchState
+->
+  ProcMatchInfo list
+  ArgMatchState
+  bool
+) =>: matchArgument
+  ArgMatchState.nextArgType $ getGenericSplatId .if
+    $1 ArgMatchState.isLastArg if
+      ## mark proc as stack-consumer (-> actual consumed args determined by checking quotation signature)
+    else
+      ## TODO how to best consume splats (? consume increasing number of args VS create max tuple and cut off elements
+      $ matchMaxGenericSplatTuple newGenericValue
+      while peekGenericValue types.compositeEltCount 0 > do
+        matchProcedureFork
+        peekGenericValue types.cutOfFirstTupleElement setLastGenericValue
+      end
+    end
+    true return
+  else $ getGenericTypeId .if =:: genericId ..drop
+    genericAllowsImplicitEmpty if
+      genericId Type .Empty newGenericValue matchProcedureFork
+    end
+    genericId ArgMatchState.nextStackValueForType matchGenericArg
+  else
+    ArgMatchState.nextStackValueForType matchStackValue
+  end
+end
+proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchArguments
+  while $ .length 0 > and matchArgument end
+end
+proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ArgMatchState ) =>: matchProcedureFork
+  >$
+    $ list.peek <unwrap> [] ProcMatchInfo.copy list.append
+      $1 matchArguments
+    list.peek .and .matchType .NONE if list.pop ProcMatchInfo.free end
+  <$
+end
+proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchProcedure
+  ArgMatchType .EXACT ProcMatchInfo new list.append matchArguments
+end
