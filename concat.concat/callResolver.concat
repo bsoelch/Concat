@@ -877,7 +877,7 @@ proc(
       ## XXX? allow passing arrays as individual elements
       while ## skip empty parameters if stack-value is non-empty
         paramType typeContext types.isEmpty or
-              paramType typeContext types.isGeneric and
+              paramType types.isGeneric and
               paramType
                 typeContext types.unwrapNamed
               types.getGenericTypeId optional.unwrap =:: paramId
@@ -942,9 +942,9 @@ proc(
       end
       stackValues stackIndex @[] .value [] =:: stackVal
       MatchType .NONE =:: mut: matchType
-      paramType typeContext types.isGenericSplat if
+      paramType types.isGenericSplat if
         "unimplemented: generic splat" ..panic
-      else paramType typeContext types.isGeneric and
+      else paramType types.isGeneric and
           paramType
             typeContext types.unwrapNamed
           types.getGenericTypeId optional.unwrap =:: paramId
@@ -1182,7 +1182,7 @@ proc(
       constArgs
         candidate .genericValues i ArgumentId.fromIndex getValueOrNone list.append
       constArgs=
-    else eltType typeContext types.isGeneric and
+    else eltType types.isGeneric and
         candidate .genericValues i ArgumentId.fromIndex getValueOrNone =:: val
         val .None ? ! _if
       constArgs

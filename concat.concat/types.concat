@@ -2275,16 +2275,17 @@ namespace: types
   end
   proc( Type TypeContext ptr -> Type optional ) =>: export: refinementBase
     unwrapNamed switch
-      SetType .case .baseType optional.wrap return
-      RefinementType .case .baseType optional.wrap return
+      SetType .case .baseType [] optional.wrap return
+      RefinementType .case .baseType [] optional.wrap return
       _ case { } return
     end
   end
   proc( Type TypeContext ptr -> Type ) =>: export: unwrapRefinement
+      $1 =:: baseType
     unwrapNamed switch
       SetType .case .baseType [] return
       RefinementType .case .baseType [] return
-      _ case box return
+      _ case baseType return
     end
   end
   proc( Type TypeContext ptr : context -> ProcId optional ) =>: export: getTypeTrait
@@ -2323,11 +2324,11 @@ namespace: types
   proc( Type -> bool ) =>: export: isGenericSplat
     .GenericSplat ? return
   end
-  proc( Type : t -> NameId optional ) =>: export: getGenericTypeId
-    t GenericType ??
+  proc( Type -> NameId optional ) =>: export: getGenericTypeId
+    .GenericType ??
   end
-  proc( Type : t -> NameId optional ) =>: export: getGenericSplatId
-    t GenericSplat ??
+  proc( Type -> NameId optional ) =>: export: getGenericSplatId
+    .GenericSplat ??
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
@@ -2650,7 +2651,7 @@ namespace: types
   end
 
   proc( Type Type TypeContext ptr.mut -> bool ) =>: export: canAutoCast
-    $2 $2 types.typeEquals if true return end
+    $2 $2 types.typeEquals if ..drop.3 true return end
     canDecayTo
   end
   proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canDecayTo
