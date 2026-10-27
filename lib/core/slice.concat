@@ -115,6 +115,24 @@ namespace: slice
     getValue_32mut
     getValue_64mut
   end
+  proc( type : auto: T T slice -> T ) =>: getLast0
+    $ .length 1 - get
+  end
+  proc( type : auto: T T slice.mut -> T ) =>: getLast_mut
+    $ .length 1 - get
+  end
+  overload: getLast getLast0 getLast_mut end
+  proc( type : auto: T T slice -> T slice T ) =>: removeLast
+    $ .length 1 -
+      $1 $1 head <<$
+    get
+  end
+  proc( type : auto: T T slice.mut -> T slice.mut T ) =>: removeLast_mut
+    $ .length 1 -
+      $1 $1 head <<$
+    get
+  end
+  overload: removeLast removeLast0 removeLast_mut end
   proc(
     type : auto: T
     T slice : elts
@@ -383,6 +401,47 @@ namespace: slice
     r SearchResult .Missing return
   end
   overload: export: binarySearch binarySearchC binarySearchF end
+  ## TODO? extract common code of find variants (? <T iterator> should be a matchable type)
+  proc(
+    type : auto: T type : auto: K
+    T slice
+    K
+    ( K T -> bool ) ptr : f
+  -> T optional ) =>: find
+    >$ for ## K <elt>
+      $1 $1 f () if
+        <$ ..drop optional.wrap return
+      else ..drop end
+    end
+    { }
+  end
+  proc(
+    type : auto: T type : auto: K
+    T slice.mut
+    K
+    ( K T -> bool ) ptr : f
+  -> T ptr.mut optional ) =>: findAtMut
+    >$ atItrMut for ## K <elt>
+      $1 $1 f () if
+        <$ ..drop optional.wrap return
+      else ..drop end
+    end
+    { }
+  end
+  proc(
+    type : auto: T type : auto: K
+    T slice
+    K
+    ( K T -> bool ) ptr : f
+  -> T optional ) =>: findLast
+    >$ reversed for ## K <elt>
+      $1 $1 f () if
+        <$ ..drop optional.wrap return
+      else ..drop end
+    end
+    { }
+  end
+
   proc(
     type : auto: T
     T slice : seq
