@@ -122,7 +122,7 @@ namespace: slice
     $ .length 1 - get
   end
   overload: getLast getLast0 getLast_mut end
-  proc( type : auto: T T slice -> T slice T ) =>: removeLast
+  proc( type : auto: T T slice -> T slice T ) =>: removeLast0
     $ .length 1 -
       $1 $1 head <<$
     get
