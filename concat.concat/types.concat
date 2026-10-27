@@ -2273,8 +2273,15 @@ namespace: types
     context unwrapNamed =:: t0
     t0 .RefinementType ? or t0 .SetType ? end return
   end
-  proc( Type : box TypeContext ptr : context -> Type ) =>: export: unwrapRefinement
-    box context unwrapNamed switch
+  proc( Type TypeContext ptr -> Type optional ) =>: export: refinementBase
+    unwrapNamed switch
+      SetType .case .baseType optional.wrap return
+      RefinementType .case .baseType optional.wrap return
+      _ case { } return
+    end
+  end
+  proc( Type TypeContext ptr -> Type ) =>: export: unwrapRefinement
+    unwrapNamed switch
       SetType .case .baseType [] return
       RefinementType .case .baseType [] return
       _ case box return
@@ -2310,17 +2317,17 @@ namespace: types
   proc( NameId -> Type ) =>: export: newGenericSplat
     Type .GenericSplat return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isGeneric
-    unwrapNamed .GenericType ? return
+  proc( Type -> bool ) =>: export: isGeneric
+    .GenericType ? return
   end
-  proc( Type TypeContext ptr -> bool ) =>: export: isGenericSplat
-    unwrapNamed .GenericSplat ? return
+  proc( Type -> bool ) =>: export: isGenericSplat
+    .GenericSplat ? return
   end
   proc( Type : t -> NameId optional ) =>: export: getGenericTypeId
-    t switch
-      GenericType GenericSplat .case optional.wrap return
-      _ case { } return
-    end
+    t GenericType ??
+  end
+  proc( Type : t -> NameId optional ) =>: export: getGenericSplatId
+    t GenericSplat ??
   end
   proc( Type : t0 TypeContext ptr : context -> bool #+has static arg+# ) =>: export: containsGeneric
     t0 context unwrapNamedKeepGenerated =:: t
@@ -2642,10 +2649,11 @@ namespace: types
     false return
   end
 
-  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canAutoCast
-    src target types.typeEquals if
-      true return
-    end
+  proc( Type Type TypeContext ptr.mut -> bool ) =>: export: canAutoCast
+    $2 $2 types.typeEquals if true return end
+    canDecayTo
+  end
+  proc( Type : src Type : target TypeContext ptr.mut : context -> bool ) =>: export: canDecayTo
     src context types.isSetOrRefinementType and src context unwrapRefinement target typeEquals if
       true return ## allow automatic conversions from type-refinement to base-type
     end
