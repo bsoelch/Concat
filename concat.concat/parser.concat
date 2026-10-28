@@ -490,6 +490,11 @@ proc(
         id.FLAG_STATIC flags | flags=
         ## TODO? allow auto-args to be non-static
         continue
+      else $ "auto?:":s string.eq _if
+        id.FLAG_AUTO flags | flags=
+        id.FLAG_MAYBE_EMPTY flags | flags=
+        id.FLAG_STATIC flags | flags=
+        continue
       else $ "static:":s string.eq _if
         id.FLAG_STATIC flags | flags=
         continue
