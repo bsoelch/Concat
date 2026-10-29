@@ -84,32 +84,81 @@ proc(
   end
   ..drop.2 ArgMatchType .NONE return
 end
+proc( StackValue -> StackValue optional ) =>: literalStackValueAsStruct
+  ## decay type to struct update constant element if neccessary
+end
+proc( StackValue -> StackValue optional ) =>: literalStackValueAsArray
+  ## decay type to array, cast const elements if neccessary
+end
+proc( StackValue -> StackValue optional ) =>: literalStackValueAsPointer
+  ## decay type to (const) pointer, cast const elements if neccessary
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchCallable
+  ## match proc-args and ret-values
+  ## mark proc with unknown args as ambigous and retry match after all other values have matched
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchArray
+  ## match target and size
+end
+proc( ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ) =>: prepareStructArgs
+  ## prepate ArgMatchState to match arguments of structure and then be reset into procedure
+  ## ! unlike top-level proc struct has to match all arguments
+  ## TODO? should multi-match (implicit empty, different splat sizes) within struct be allowed
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchStruct
+  prepareStructArgs matchArguments
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchUnion
+  ## match elements one by one
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchUnionLiteral
+  ## ensure that:
+  ## a) literal has length 1 and name/type matches exactly one of the union elements
+  ## b) literal has length 0 and there is exactly one empty union element
+end
+proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchTypeGenerator
+  ## match generator elements one by one
+end
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchPartialGenericValue
   $ types.isSetOrRefinementType if
     ## TODO match generic set/refinement types
-  end
-  $ types.Callable if
-    ## TODO match procedure / proc-ptr
   end
   $1 .valType ..tag $1 ..tag != and $1 .valType types.isLiteral ! if
     ..drop.2 ArgMatchType .NONE return ## incompatible shape
   end
   switch
     Pointer MutablePointer RawPointer MutableRawPointer ArrayType case
-      ## check literals
-      ## match base-type and size
+      $1 .valType types.isLiteral if
+        >$
+          $1 types.isArray if
+            literalStackValueAsArray
+          else
+            literalStackValueAsPointer
+          end .else ..drop
+            ArgMatchType .NONE return ## incompatible shape
+          end
+        <$
+      end matchArray
     break
-    Struct TaggedUnion case
-      ## check literals
-      ## match elements
+    Struct case
+      $1 .valType types.isLiteral if
+        >$
+          literalStackValueAsStruct .else ..drop
+            ArgMatchType .NONE return ## incompatible shape
+          end
+        <$
+      end matchStruct
     break
-    ComputedUnion RawUnion case
-      ## check literals
-      ## match elements
+    TaggedUnion ComputedUnion RawUnion case
+      $1 .valType types.isLiteral if
+        matchUnionLiteral return
+      end
+      matchUnion
     break
     GeneratedType case
-      ## check literals
-      ## match type-params
+      $1 .valType types.isLiteral if
+        types.getGeneratedType matchPartialGenericValue return
+      end matchTypeGenerator
     break
     UnionElement case "union-element cannot be a procedure argument" ..panic
     Procedure case "procedures should have been handled seperately" ..panic
@@ -122,12 +171,15 @@ proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list Arg
 end
 
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchStackValue
-  $1 .valType $1 types.typeEquals if ..drop.2 ArgMatchType .EXACT return end
   $ types.refinementBase .and $2 .valType types.typeEquals if
     matchRefinementType return
   end
+  $1 .valType $1 types.typeEquals if ..drop.2 ArgMatchType .EXACT return end
   $1 .valType $1 types.canDecayTo if ..drop.2
     ArgMatchType .DECAY return
+  end
+  $ types.Callable if
+    matchCallable return
   end
   $ types.containsGeneric if
     matchPartialGenericValue return
@@ -159,11 +211,11 @@ proc(
       end
     end
     true return
-  else $ getGenericTypeId .if =:: genericId ..drop
-    genericAllowsImplicitEmpty if
-      genericId Type .Empty newGenericValue matchProcedureFork
+  else $ getGenericTypeId .if >$ ..drop
+    $ id.identifierFlags id.FLAG_MAYBE_EMPTY & ? if
+      $ Type .Empty newGenericValue matchProcedureFork
     end
-    genericId ArgMatchState.nextStackValueForType matchGenericArg
+    ArgMatchState.nextStackValueForType matchGenericArg
   else
     ArgMatchState.nextStackValueForType matchStackValue
   end
