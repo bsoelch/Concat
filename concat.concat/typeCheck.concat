@@ -2952,7 +2952,7 @@ proc(
     op .val switch
       NOP case continue.opLoop
       WildCard case ## TODO? special handling for wild-card
-        ConstValue .WildCard Type .Empty op .pos state pushConstant
+        ConstValue .WildCard Type .Undefined op .pos state pushConstant
       continue.opLoop
       CharConst .case
         ConstValue .Char types.CHAR8 op .pos state pushConstant

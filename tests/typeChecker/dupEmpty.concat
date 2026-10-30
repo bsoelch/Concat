@@ -1,6 +1,6 @@
-proc( type : auto: T i32 T -> i32 T T i32 ) =>: test
+proc( type : auto?: T i32 T -> i32 T T i32 ) =>: test
   $ $2
 end
 proc( -> ) =>: main
-   1 _ test ..drop.4
+   1 test ..drop.4
 end
