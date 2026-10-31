@@ -45,14 +45,17 @@ namespace: f128
     low hi f128 new
   end
   ## TODO make sure to use unsigned comparisson for comparing parts of f128
-  proc( i32 : n -> f128 ) =>: export: fromI32
-    n i128.fromI32 false fromI128_internal
+  proc( i32 -> f128 ) =>: export: fromI32
+    i128.fromI32 fromI128
   end
-  proc( i64 : n -> f128 ) =>: export: fromI64
-    n i128.fromI64 false fromI128_internal
+  proc( i32 -> f128 ) =>: export: fromU32
+    i128.fromU32 fromU128
   end
-  proc( i64 : n -> f128 ) =>: export: fromU64
-    n i128.fromU64 false fromI128_internal
+  proc( i64 -> f128 ) =>: export: fromI64
+    i128.fromI64 fromI128
+  end
+  proc( i64 -> f128 ) =>: export: fromU64
+    i128.fromU64 fromU128
   end
   proc( i128 -> f128 ) =>: export: fromI128
     true fromI128_internal

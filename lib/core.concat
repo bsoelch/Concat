@@ -18,6 +18,7 @@ end
 "core/f32" import
 "core/f64" import
 "core/f128" import
+"core/numberAs" import
 "core/ptr" import
 "core/type" import
 

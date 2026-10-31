@@ -1,0 +1,273 @@
+"integers" import
+"floats" import
+namespace: i8
+  proc( i8 oneOf( i16 ) : static: _ -> i16 ) =>: asI16
+    ..builtIn.cvt.s8.i16
+  end
+  proc( i8 oneOf( i32 ) : static: _ -> i32 ) =>: asI32
+    ..builtIn.cvt.s8.i32
+  end
+  proc( i8 oneOf( i64 ) : static: _ -> i64 ) =>: asI64
+    ..builtIn.cvt.s8.i64
+  end
+  proc( i8 oneOf( f32 ) : static: _ -> f32 ) =>: asF32
+    ..builtIn.cvt.s8.f32
+  end
+  proc( i8 oneOf( f64 ) : static: _ -> f64 ) =>: asF64
+    ..builtIn.cvt.s8.f64
+  end
+  proc( i8 oneOf( i16 ) : static: _ -> i16 ) =>: asI16u
+    ..builtIn.cvt.u8.i16
+  end
+  proc( i8 oneOf( i32 ) : static: _ -> i32 ) =>: asI32u
+    ..builtIn.cvt.u8.i32
+  end
+  proc( i8 oneOf( i64 ) : static: _ -> i64 ) =>: asI64u
+    ..builtIn.cvt.u8.i64
+  end
+  proc( i8 oneOf( f32 ) : static: _ -> f32 ) =>: asF32u
+    ..builtIn.cvt.u8.f32
+  end
+  proc( i8 oneOf( f64 ) : static: _ -> f64 ) =>: asF64u
+    ..builtIn.cvt.u8.f64
+  end
+  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: asI128
+    i64 cast.s i128.fromI64
+  end
+  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: asI128u
+    i64 cast.u i128.fromU64
+  end
+  proc( i8 oneOf( f128 ) : static: _ -> f128 ) =>: asF128
+    i64 cast.s f128.fromI64
+  end
+  proc( i8 oneOf( f128 ) : static: _ -> f128 ) =>: asF128u
+    i64 cast.u f128.fromU64
+  end
+end
+namespace: i16
+  proc( i16 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8
+    ..builtIn.cvt.i16.i8
+  end
+
+  proc( i16 oneOf( i32 ) : static: _ -> i32 ) =>: asI32
+    ..builtIn.cvt.s16.i32
+  end
+  proc( i16 oneOf( i64 ) : static: _ -> i64 ) =>: asI64
+    ..builtIn.cvt.s16.i64
+  end
+  proc( i16 oneOf( f32 ) : static: _ -> f32 ) =>: asF32
+    ..builtIn.cvt.s16.f32
+  end
+  proc( i16 oneOf( f64 ) : static: _ -> f64 ) =>: asF64
+    ..builtIn.cvt.s16.f64
+  end
+  proc( i16 oneOf( i32 ) : static: _ -> i32 ) =>: asI32u
+    ..builtIn.cvt.u16.i32
+  end
+  proc( i16 oneOf( i64 ) : static: _ -> i64 ) =>: asI64u
+    ..builtIn.cvt.u16.i64
+  end
+  proc( i16 oneOf( f32 ) : static: _ -> f32 ) =>: asF32u
+    ..builtIn.cvt.u16.f32
+  end
+  proc( i16 oneOf( f64 ) : static: _ -> f64 ) =>: asF64u
+    ..builtIn.cvt.u16.f64
+  end
+  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: asI128
+    i64 cast.s i128.fromI64
+  end
+  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: asI128u
+    i64 cast.u i128.fromU64
+  end
+  proc( i16 oneOf( f128 ) : static: _ -> f128 ) =>: asF128
+    i64 cast.s f128.fromI64
+  end
+  proc( i16 oneOf( f128 ) : static: _ -> f128 ) =>: asF128u
+    i64 cast.u f128.fromU64
+  end
+end
+namespace: i32
+  proc( i32 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8
+    ..builtIn.cvt.i32.i8
+  end
+  proc( i32 oneOf( i16 ) : static: _ -> i16 ) =>: toI16
+    ..builtIn.cvt.i32.i16
+  end
+  proc( i32 oneOf( f32 ) : static: _ -> f32 ) =>: toF32
+    ..builtIn.cvt.s32.f32
+  end
+  proc( i32 oneOf( f32 ) : static: _ -> f32 ) =>: toF32u
+    ..builtIn.cvt.u32.f32
+  end
+
+  proc( i32 oneOf( i64 ) : static: _ -> i64 ) =>: asI64
+    ..builtIn.cvt.s32.i64
+  end
+  proc( i32 oneOf( f64 ) : static: _ -> f64 ) =>: asF64
+    ..builtIn.cvt.s32.f64
+  end
+  proc( i32 oneOf( i64 ) : static: _ -> i64 ) =>: asI64u
+    ..builtIn.cvt.u32.i64
+  end
+  proc( i32 oneOf( f64 ) : static: _ -> f64 ) =>: asF64u
+    ..builtIn.cvt.u32.f64
+  end
+  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: asI128
+    i128.fromI32
+  end
+  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: asI128u
+    i128.fromU32
+  end
+  proc( i32 oneOf( f128 ) : static: _ -> f128 ) =>: asF128
+    f128.fromI32
+  end
+  proc( i32 oneOf( f128 ) : static: _ -> f128 ) =>: asF128u
+    f128.fromU32
+  end
+end
+namespace: i64
+  proc( i64 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8
+    ..builtIn.cvt.i64.i8
+  end
+  proc( i64 oneOf( i16 ) : static: _ -> i16 ) =>: toI16
+    ..builtIn.cvt.i64.i16
+  end
+  proc( i64 oneOf( i32 ) : static: _ -> i32 ) =>: toI32
+    ..builtIn.cvt.i64.i32
+  end
+  proc( i64 oneOf( f32 ) : static: _ -> f32 ) =>: toF32
+    ..builtIn.cvt.s64.f32
+  end
+  proc( i64 oneOf( f64 ) : static: _ -> f64 ) =>: toF64
+    ..builtIn.cvt.s64.f64
+  end
+  proc( i64 oneOf( f32 ) : static: _ -> f32 ) =>: toF32u
+    ..builtIn.cvt.u64.f32
+  end
+  proc( i64 oneOf( f64 ) : static: _ -> f64 ) =>: toF64u
+    ..builtIn.cvt.u64.f64
+  end
+  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: asI128
+    i128.fromI64
+  end
+  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: asI128u
+    i128.fromU64
+  end
+  proc( i64 oneOf( f128 ) : static: _ -> f128 ) =>: asF128
+    f128.fromI64
+  end
+  proc( i64 oneOf( f128 ) : static: _ -> f128 ) =>: asF128u
+    f128.fromU64
+  end
+end
+namespace: i128
+  ## TODO i128.to...
+  proc( i128 oneOf( f128 ) : static: _ -> f128 ) =>: toF128
+    f128.fromI128
+  end
+  proc( i128 oneOf( f128 ) : static: _ -> f128 ) =>: toF128u
+    f128.fromU128
+  end
+end
+namespace: f16
+  ## TODO f16.to...
+end
+namespace: f32
+  proc( f32 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8
+    ..builtIn.cvt.f32.s8
+  end
+  proc( f32 oneOf( i16 ) : static: _ -> i16 ) =>: toI16
+    ..builtIn.cvt.f32.s16
+  end
+  proc( f32 oneOf( i32 ) : static: _ -> i32 ) =>: toI32
+    ..builtIn.cvt.f32.s32
+  end
+  proc( f32 oneOf( i64 ) : static: _ -> i64 ) =>: toI64
+    ..builtIn.cvt.f32.s64
+  end
+  proc( f32 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8u
+    ..builtIn.cvt.f32.u8
+  end
+  proc( f32 oneOf( i16 ) : static: _ -> i16 ) =>: toI16u
+    ..builtIn.cvt.f32.u16
+  end
+  proc( f32 oneOf( i32 ) : static: _ -> i32 ) =>: toI32u
+    ..builtIn.cvt.f32.u32
+  end
+  proc( f32 oneOf( i64 ) : static: _ -> i64 ) =>: toI64u
+    ..builtIn.cvt.f32.u64
+  end
+  proc( f32 oneOf( f64 ) : static: _ -> f64 ) =>: asF64
+    ..builtIn.cvt.f32.f64
+  end
+end
+namespace: f64
+  proc( f64 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8
+    ..builtIn.cvt.f64.s8
+  end
+  proc( f64 oneOf( i16 ) : static: _ -> i16 ) =>: toI16
+    ..builtIn.cvt.f64.s16
+  end
+  proc( f64 oneOf( i32 ) : static: _ -> i32 ) =>: toI32
+    ..builtIn.cvt.f64.s32
+  end
+  proc( f64 oneOf( i64 ) : static: _ -> i64 ) =>: toI64
+    ..builtIn.cvt.f64.s64
+  end
+  proc( f64 oneOf(  i8 ) : static: _ -> i8  ) =>: toI8u
+    ..builtIn.cvt.f64.u8
+  end
+  proc( f64 oneOf( i16 ) : static: _ -> i16 ) =>: toI16u
+    ..builtIn.cvt.f64.u16
+  end
+  proc( f64 oneOf( i32 ) : static: _ -> i32 ) =>: toI32u
+    ..builtIn.cvt.f64.u32
+  end
+  proc( f64 oneOf( i64 ) : static: _ -> i64 ) =>: toI64u
+    ..builtIn.cvt.f64.u64
+  end
+  proc( f64 oneOf( f64 ) : static: _ -> f64 ) =>: toF32
+    ..builtIn.cvt.f64.f32
+  end
+end
+namespace: f128
+  ## TODO f128.to...
+end
+
+## loss-free conversion, ? return optional on lossy conversion
+overload: as
+  i8.asI16 i8.asI32 i8.asI64 i8.asI128 i8.asF32 i8.asF64 i8.asF128
+  i16.asI32 i16.asI64 i16.asI128 i16.asF32 i16.asF64 i16.asF128
+  i32.asI64 i32.asI128 i32.asF64 i32.asF128
+  i64.asI128 i64.asF128
+  f32.asF64
+end
+namespace: as
+  overload: u
+    i8.asI16u i8.asI32u i8.asI64u i8.asI128u i8.asF32u i8.asF64u i8.asF128u
+    i16.asI32u i16.asI64u i16.asI128u i16.asF32u i16.asF64u i16.asF128u
+    i32.asI64u i32.asI128u i32.asF64u i32.asF128u
+    i64.asI128u i64.asF128u
+  end
+end
+## to: potentially lossy direct conversion
+overload: to
+  i8.asI16 i8.asI32 i8.asI64 i8.asI128 i8.asF32 i8.asF64 i8.asF128
+  i16.toI8 i16.asI32 i16.asI64 i16.asI128 i16.asF32 i16.asF64 i16.asF128
+  i32.toI8 i32.toI16 i32.toF32 i32.asI64 i32.asI128 i32.asF64 i32.asF128
+  i64.toI8 i64.toI16 i64.toI32 i64.toF32 i64.toF64 i64.asI128 i64.asF128
+  i128.toF128
+  f32.toI8 f32.toI16 f32.toI32 f32.toI64 f32.asF64
+  f64.toI8 f64.toI16 f64.toI32 f64.toI64 f64.toF32
+end
+namespace: to
+  overload: u
+    i8.asI16u i8.asI32u i8.asI64u i8.asI128u i8.asF32u i8.asF64u i8.asF128u
+    i16.asI32u i16.asI64u i16.asI128u i16.asF32u i16.asF64u i16.asF128u
+    i32.asI64u i32.asI128u i32.toF32u i32.asF64u i32.asF128u
+    i64.asI128u i64.toF32u i64.toF64u i64.asF128u
+    i128.toF128u
+    f32.toI8u f32.toI16u f32.toI32u f32.toI64u
+    f64.toI8u f64.toI16u f64.toI32u f64.toI64u
+  end
+end

@@ -130,6 +130,8 @@
           new                 |
           as                  |
           as\.u               |
+          to                  |
+          to\.u               |
           cast                |
           cast\.u             |
           cast\.s             |

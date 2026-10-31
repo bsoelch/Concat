@@ -33,31 +33,6 @@ namespace: i128
   proc( i64 -> i128 ) =>: export: fromU64
     0 i128.create
   end
-  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: i8AsI128
-    i64 cast.s fromI64
-  end
-  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: i16AsI128
-    i64 cast.s fromI64
-  end
-  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: i32AsI128
-    fromI32
-  end
-  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: i64AsI128
-    fromI64
-  end
-  proc( i8 oneOf( i128 ) : static: _ -> i128 ) =>: i8AsI128u
-    i64 cast.u fromU64
-  end
-  proc( i16 oneOf( i128 ) : static: _ -> i128 ) =>: i16AsI128u
-    i64 cast.u fromU64
-  end
-  proc( i32 oneOf( i128 ) : static: _ -> i128 ) =>: i32AsI128u
-    fromU32
-  end
-  proc( i64 oneOf( i128 ) : static: _ -> i128 ) =>: i64AsI128u
-    fromU64
-  end
-  ## TODO: conversion i128ToI... i128AsI...
 
 ## bitwise operations
   proc( i128 : a -> i128 ) =>: export: flip
@@ -486,11 +461,3 @@ overload: export: <min>  i128.min  end
 overload: export: <max>  i128.max  end
 overload: export: <umin> i128.umin end
 overload: export: <umax> i128.umax end
-overload: export: as
-  i128.i8AsI128 i128.i16AsI128 i128.i32AsI128 i128.i64AsI128
-end
-namespace: as
-  overload: export: u
-    i128.i8AsI128u i128.i16AsI128u i128.i32AsI128u i128.i64AsI128u
-  end
-end
