@@ -1,7 +1,7 @@
 proc(
-  type : auto: L
-  type : auto: R
-  type : auto: O
+  type : auto?: L
+  type : auto?: R
+  type : auto?: O
   L : x
   proc( L R -> O ) ptr : f
   R : data

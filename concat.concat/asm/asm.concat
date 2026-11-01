@@ -234,7 +234,7 @@ namespace: asm
     Atom .Data
   end
 
-  proc( type : auto: C Atom ( Operand C -> Operand ) ptr : f C : curry -> Atom ) =>: export: mapOperands
+  proc( type : auto?: C Atom ( Operand C -> Operand ) ptr : f C : curry -> Atom ) =>: export: mapOperands
     .Instruction .if
       $ .args switch
         None case Operands .None break

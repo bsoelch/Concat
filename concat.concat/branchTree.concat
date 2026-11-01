@@ -355,7 +355,7 @@ namespace: branchTree
   union( _ : Error i32 : Success ) =:: MergeResult
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T BranchTree ptr.mut : tree
     NodeId slice : branchHeads ## should be non-empty
     proc( T ptr slice : types i32 : offset C : context -> T ) ptr : mergeValues

@@ -654,7 +654,7 @@ namespace: list
 
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T list : elts
     proc( T T C -> i32 ) ptr : cmp
     C : context

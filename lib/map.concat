@@ -262,7 +262,7 @@ namespace: map
   proc(
     type : auto: K
     type : auto: V
-    type : auto: C
+    type : auto?: C
     K V hashMap ptr.mut : data
     K : key
     ( V optional C -> V ) ptr : updateFunc

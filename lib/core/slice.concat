@@ -495,7 +495,7 @@ namespace: slice
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice : a
     T slice : b
     ( T T C -> bool ) ptr : eqCheck
@@ -516,7 +516,7 @@ namespace: slice
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice : a
     ( T C -> i32 ) ptr : eltHash
     C : context
@@ -541,7 +541,7 @@ namespace: slice
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice : a
     T slice : b
     ( T T C -> i32 ) ptr : eltCmp
@@ -574,7 +574,7 @@ namespace: slice
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice : a
     T slice : b
     ( T T C -> i32 ) ptr : eltCmp
@@ -656,7 +656,7 @@ namespace: slice
   ## if the slice is not a sub-sequence contain the smallest possible start index
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice : a
     T slice : b
     proc( T ptr T ptr C -> bool ) ptr : shadow: eq

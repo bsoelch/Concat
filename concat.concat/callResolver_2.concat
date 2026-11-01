@@ -261,6 +261,12 @@ proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchProcedur
 end
 ## TODO? ensure procedures in bundle are sorted by match-weight
 ## * explicit before generic before splats, longer signatures first, mutable before const, refined before unrefined
+## * ? sort matches within categories by type of first arg (up to refinement) to allow quickliy finding signature in large list (e.g. `as` overload, which has many procs of shape: ( A oneOf( B ) -> B ) )
 ## * pick first exact match, remember decay matches & almost matches
 ## * check multi-value elements in order of match weight: non-empty before empty, decreasing size of splat
 ## potential decay: literal -> value, ptr.mut -> ptr, refinement -> base, proc-rename
+
+## optimize for common cases:
+## 1) No generics, single signature
+## 2) Generic siganture with 1 to 4 generic args
+## 3) overload with many simple procedures

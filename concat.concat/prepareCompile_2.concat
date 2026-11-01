@@ -436,7 +436,7 @@ proc( Type : valType i32 : index FilePosition ptr : pos ProgramContext ptr.mut :
   ElementSlotInfo new return
 end
 proc( Type : valType NestedElementPath : path FilePosition ptr : pos ProgramContext ptr.mut : program -> ElementSlotInfo  ) =>: findNestedTupleElementSlots
-  ## proc( type : auto: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) : forEach
+  ## proc( type : auto?: C NestedElementPath ( i32 C -> ) ptr : f C : c -> ) : forEach
   "nested element slots" ..panic
 end
 proc( LIROp list i32 : count FilePosition ptr : pos ConverterContext ptr.mut : context -> LIROp list ) =>: dropSlots

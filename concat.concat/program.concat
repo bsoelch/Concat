@@ -259,7 +259,7 @@ union(
 ) =:: export: NestedElementPath
 namespace: NestedElementPath
   ## NestedElementPath as first argument to avoid ambiguitiy if first argument is empty (when proc-type implicit)
-  proc( type : auto: A type : auto: C NestedElementPath A ( A i32 C -> A ) ptr : f C : c -> A ) =>: export: forEach
+  proc( type : auto?: A type : auto?: C NestedElementPath A ( A i32 C -> A ) ptr : f C : c -> A ) =>: export: forEach
     >$ switch
       Path8 .case =:: path
         path .length iSize cast.u for

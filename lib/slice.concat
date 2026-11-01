@@ -42,7 +42,7 @@ namespace: slice
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T slice.mut : elts
     proc( T T C -> i32 ) ptr : fCmp
     C : context

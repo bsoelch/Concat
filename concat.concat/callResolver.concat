@@ -944,21 +944,11 @@ proc(
       MatchType .NONE =:: mut: matchType
       paramType types.isGenericSplat if
         "unimplemented: generic splat" ..panic
-      else paramType types.isGeneric and
-          paramType
-            typeContext types.unwrapNamed
-          types.getGenericTypeId optional.unwrap =:: paramId
+      else paramType typeContext types.unwrapNamed types.getGenericTypeId .and =:: paramId
           current .genericValues
             paramId ArgumentId.fromName
           map.at optional.isEmpty _if
-        stackVal .WildCard ? if
-          current [] .nEmpty 1 + current .nEmpty=
-          current .genericValues
-            paramId ArgumentId.fromName
-            Type .Empty ConstValue .TypeId GenericArg .Fixed
-          map.put ..drop
-          i 1:iSize + continue ## matched empty value to generic
-        else
+        paramId id.identifierFlags id.FLAG_MAYBE_EMPTY & ? if
           ## add copy of signature with generic type set to empty
           i currentSignatures@ copyElement =:: copySig
           ## update current pointer after changing list
@@ -970,12 +960,12 @@ proc(
           copySig [] .nEmpty
             1 +
           copySig .nEmpty=
-          ## mark generic as non-empty
-          current .genericValues
-            paramId ArgumentId.fromName
-            GenericArg .NonEmpty
-          map.put ..drop
         end
+        ## mark generic as non-empty
+        current .genericValues
+          paramId ArgumentId.fromName
+          GenericArg .NonEmpty
+        map.put ..drop
       end
       paramName? .and id.identifierFlags id.FLAG_STATIC & ? end or
           paramType typeContext types.isType or stackVal .TypeId ? if

@@ -3,7 +3,7 @@
 namespace: array
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T ptr.raw.mut : src
     T ptr.raw.mut : buff
     iSize : offset
@@ -59,7 +59,7 @@ namespace: array
   end
   proc(
     type : auto: T
-    type : auto: C
+    type : auto?: C
     T ptr.raw.mut : data
     iSize : size
     proc( T T C -> i32 ) ptr : cmp
@@ -88,7 +88,7 @@ namespace: array
   ## returns the index of the largest element in the list that is less than or equal to `value`
   ## if no value is smaller zero is returned
   ## assumes the list is sorted in increasing order
-  proc( type : auto: K  type : auto: T  type : auto: C
+  proc( type : auto: K  type : auto: T  type : auto?: C
     T ptr.raw : data
     iSize : size
     proc( K T C -> i32 ) ptr : cmp

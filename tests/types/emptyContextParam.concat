@@ -1,4 +1,4 @@
-proc( type : auto: A type : auto: B
+proc( type : auto: A type : auto?: B
   A A ( A A B -> A ) ptr : f B : c -> A
 ) =>: emptyTest
   c f ()

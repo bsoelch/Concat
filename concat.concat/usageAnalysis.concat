@@ -59,7 +59,7 @@ namespace: VariableUses
      list.copy VariableUses .Uses
    end
  end
-  proc( type : auto: C VariableUses ( VariableUse C -> ) ptr : f C : context -> ) =>: forEach
+  proc( type : auto?: C VariableUses ( VariableUse C -> ) ptr : f C : context -> ) =>: forEach
     switch
       Arg Read case return
       Use .case context f () return
