@@ -260,6 +260,7 @@ proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchProcedur
   ArgMatchType .EXACT ProcMatchInfo new list.append matchArguments
 end
 ## TODO? ensure procedures in bundle are sorted by match-weight
-## * explicit before generic before splats, mutable before const, refined before unrefined
+## * explicit before generic before splats, longer signatures first, mutable before const, refined before unrefined
 ## * pick first exact match, remember decay matches & almost matches
-## ? 
+## * check multi-value elements in order of match weight: non-empty before empty, decreasing size of splat
+## potential decay: literal -> value, ptr.mut -> ptr, refinement -> base, proc-rename
