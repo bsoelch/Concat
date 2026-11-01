@@ -1,5 +1,5 @@
 
-enum( NONE EXACT DECAY GENERIC REFINE AMBIGOUS ) =:: ArgMatchType
+enum( NONE EXACT DECAY GENERIC AMBIGOUS ) =:: ArgMatchType
 struct(
   NameId : name
   Type : value
@@ -70,10 +70,21 @@ proc(
   StackValue
   Type
 -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchRefinementType
+  ## 1. check base type
+  <<<$ <<<$ ## <val> <type> <procs> <args>
+    $3 .valType $3 types.refinementBase <unwrap> matchStackValue switch
+      NONE AMBIGOUS .case >>>>$ >>>>$ ..drop.2 return
+      EXACT DECAY GENERIC .case break
+    end =:: baseMatch
+  >>>$ >>>$
+  ## 2. check refinement constant
+  >$ .value
+    $ .None ? if ..drop.2 ArgMatchType .NONE return end ## no constant -> no refinement
+  <$
   $ types.isSetTypes if
     types.getSetTypeEntries for
       $1 $1 constantEquals if ..drop.2
-        ArgMatchType .EXACT return
+        baseMatch return
       end
       ## TODO: generic set-elements, ? type decayable to type-set element
       ..drop
@@ -106,10 +117,25 @@ proc( ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ) =>: pr
   ## TODO? should multi-match (implicit empty, different splat sizes) within struct be allowed
 end
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchStruct
+  ## TODO: ensure element labels match
   prepareStructArgs matchArguments
 end
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchUnion
+  $ types.compositeEltCount $1 .valType types.compositeEltCount != if
+    ..drop.2 ArgMatchType .NONE return ## different element count -> no match
+  end
+  >$ =:: stackVal ## <procs> <args> <type>
   ## match elements one by one
+  types.compositeElements for
+    $ types.isGenericSplat if
+      ## error: splats not supported within union
+      ..drop ArgMatchType .NONE return
+    end
+    ## TODO: ensure element labels match
+    stackVal >$ matchStackValue $ .NONE if
+      return
+    end
+  end
 end
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchUnionLiteral
   ## ensure that:
@@ -120,8 +146,8 @@ proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list Arg
   ## match generator elements one by one
 end
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchPartialGenericValue
-  $ types.isSetOrRefinementType if
-    ## TODO match generic set/refinement types
+  $ getGenericTypeId .if >$ ..drop
+    matchGenericArg return
   end
   $1 .valType ..tag $1 ..tag != and $1 .valType types.isLiteral ! if
     ..drop.2 ArgMatchType .NONE return ## incompatible shape
@@ -171,7 +197,7 @@ proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list Arg
 end
 
 proc( ProcMatchInfo list ArgMatchState StackValue Type -> ProcMatchInfo list ArgMatchState ArgMatchType ) =>: matchStackValue
-  $ types.refinementBase .and $2 .valType types.typeEquals if
+  $ types.isSetOrRefinementType if
     matchRefinementType return
   end
   $1 .valType $1 types.typeEquals if ..drop.2 ArgMatchType .EXACT return end
