@@ -60,6 +60,9 @@ namespace: ArgMatchState
   proc( ArgMatchState Type : t -> ArgMatchState StackValue Type ) =>: nextStackValueForType
     nextStackValue t
   end
+  proc( ArgMatchState -> bool ) =>: hasArguments
+    .argTypes .length 0 >
+  end
   proc( ArgMatchState -> bool ) =>: isLastArg
     .argTypes .length 0 ==
   end
@@ -83,6 +86,7 @@ proc(
   <$
   $ types.isSetTypes if
     types.getSetTypeEntries for
+      ## ? "matchConstant" procedure (for set-elements and type-generator args)
       $1 $1 constantEquals if ..drop.2
         baseMatch return
       end
@@ -229,7 +233,6 @@ proc(
     $1 ArgMatchState.isLastArg if
       ## mark proc as stack-consumer (-> actual consumed args determined by checking quotation signature)
     else
-      ## TODO how to best consume splats (? consume increasing number of args VS create max tuple and cut off elements
       $ matchMaxGenericSplatTuple newGenericValue
       while peekGenericValue types.compositeEltCount 0 > do
         matchProcedureFork
@@ -247,7 +250,7 @@ proc(
   end
 end
 proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchArguments
-  while $ .length 0 > and matchArgument end
+  while $ hasArguments and matchArgument end
 end
 proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ArgMatchState ) =>: matchProcedureFork
   >$
