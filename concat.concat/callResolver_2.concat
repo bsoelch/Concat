@@ -250,26 +250,43 @@ proc(
   end
 end
 proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchArguments
-  while $ hasArguments and matchArgument end
+  while $ hasArguments and
+    matchArgument
+  end list.peek .and .matchType .NONE if list.pop ProcMatchInfo.free end
 end
 proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ArgMatchState ) =>: matchProcedureFork
   >$
-    $ list.peek <unwrap> [] ProcMatchInfo.copy list.append
-      $1 matchArguments
-    list.peek .and .matchType .NONE if list.pop ProcMatchInfo.free end
+    $ list.peek <unwrap> [] ProcMatchInfo.copy list.append $1 matchArguments
   <$
 end
 proc( ProcMatchInfo list ArgMatchState -> ProcMatchInfo list ) =>: matchProcedure
   ArgMatchType .EXACT ProcMatchInfo new list.append matchArguments
 end
-## TODO? ensure procedures in bundle are sorted by match-weight
-## * explicit before generic before splats, longer signatures first, mutable before const, refined before unrefined
-## * ? sort matches within categories by type of first arg (up to refinement) to allow quickliy finding signature in large list (e.g. `as` overload, which has many procs of shape: ( A oneOf( B ) -> B ) )
-## * pick first exact match, remember decay matches & almost matches
-## * check multi-value elements in order of match weight: non-empty before empty, decreasing size of splat
-## potential decay: literal -> value, ptr.mut -> ptr, refinement -> base, proc-rename
 
-## optimize for common cases:
+## TODO: optimize for common cases:
 ## 1) No generics, single signature
 ## 2) Generic siganture with 1 to 4 generic args
 ## 3) overload with many simple procedures
+proc(
+  ProcId slice : procedureIds
+  StackValue slice : stackValues
+  FilePosition ptr : pos
+  TypeCheckState ptr.mut : typeChecker
+-> ProcedureCallInfo optional ProcId optional Type ) =>: export: resolveCall
+  #+procedureIds .length 12 > if
+    ## TODO? special handling for large bundles
+    ## ensure procedures in bundle are sorted by match-weight:
+    ## * explicit before generic before splats, longer signatures first, mutable before const, refined before unrefined
+    ## * ? sort matches within categories by type of first arg (up to refinement) to allow quickliy finding signature in large list (e.g. `as` overload, which has many procs of shape: ( A oneOf( B ) -> B ) )
+    ## * pick first exact match, remember decay matches & almost matches
+    ## * check multi-value elements in order of match weight: non-empty before empty, decreasing size of splat
+    ## potential decay: literal -> value, ptr.mut -> ptr, refinement -> base, proc-rename
+  end+#
+  8 ProcMatchInfo list.create ## expect low number of matches
+    procedureIds for
+      stackValues createArgState matchProcedure ## TODO? return on first full match
+    end
+  end
+end
+
+
